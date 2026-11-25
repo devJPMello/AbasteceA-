@@ -55,6 +55,93 @@ export function brandsCompatible(a: string | null | undefined, b: string | null 
   return ca === null || cb === null || ca === cb;
 }
 
+/** Words that say nothing about WHICH station it is (legal forms, generic business words). */
+const NAME_STOPWORDS = new Set([
+  'posto',
+  'postos',
+  'auto',
+  'combustivel',
+  'combustiveis',
+  'comercio',
+  'comercial',
+  'com',
+  'de',
+  'do',
+  'da',
+  'dos',
+  'das',
+  'e',
+  'derivados',
+  'petroleo',
+  'lubrificantes',
+  'lubrificante',
+  'ltda',
+  'eireli',
+  'me',
+  'epp',
+  'sa',
+  's',
+  'a',
+  'cia',
+  'distribuidora',
+  'rede',
+  'servicos',
+  'servico',
+  'center',
+  'centro',
+]);
+
+/** Brand words are removed too: the brand is compared separately and is not part of the identity. */
+const BRAND_WORDS = new Set([
+  'br',
+  'petrobras',
+  'vibra',
+  'shell',
+  'raizen',
+  'ipiranga',
+  'ale',
+  'branca',
+  'bandeira',
+]);
+
+/** The words of a name that identify the station: "AUTO POSTO DLS COMBUSTIVEIS LTDA" -> {dls}. */
+export function distinctiveTokens(name: string): Set<string> {
+  const words = name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  return new Set(words.filter((w) => !NAME_STOPWORDS.has(w) && !BRAND_WORDS.has(w)));
+}
+
+export interface NamedCandidate extends Candidate {
+  name: string;
+}
+
+/**
+ * Fallback for ANP rows whose address cannot be geocoded (Palmas' "QUADRA 406 NORTE AV NS 6"
+ * is not understood by Nominatim). A station matches when ALL of its distinctive name words
+ * appear in the ANP business name and the brands are compatible. Still conservative: nothing
+ * distinctive in the name -> no match; several matches -> ambiguous.
+ * The ANP name is a legal name ("razão social"), so many real stations will simply not match.
+ */
+export function resolveByName(
+  candidates: NamedCandidate[],
+  anpName: string,
+  anpBrand: string,
+): MatchResult {
+  const anpTokens = distinctiveTokens(anpName);
+  const matching = candidates.filter((c) => {
+    if (!brandsCompatible(c.brand, anpBrand)) return false;
+    const tokens = distinctiveTokens(c.name);
+    return tokens.size > 0 && [...tokens].every((t) => anpTokens.has(t));
+  });
+  if (matching.length === 0) return { kind: 'none' };
+  if (matching.length === 1) return { kind: 'matched', id: matching[0]!.id };
+  return { kind: 'ambiguous', ids: matching.map((c) => c.id) };
+}
+
 export interface Candidate {
   id: string;
   brand: string;

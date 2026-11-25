@@ -1,6 +1,8 @@
 import {
   brandsCompatible,
   canonicalBrand,
+  distinctiveTokens,
+  resolveByName,
   resolveCandidates,
   type Candidate,
 } from './station-matching';
@@ -35,6 +37,55 @@ describe('brandsCompatible', () => {
   it('never rules a station out when one side is unknown', () => {
     expect(brandsCompatible('Não informada', 'IPIRANGA')).toBe(true);
     expect(brandsCompatible('Shell', 'BRANCA')).toBe(true);
+  });
+});
+
+describe('distinctiveTokens', () => {
+  it('keeps only the words that identify the station', () => {
+    expect([...distinctiveTokens('AUTO POSTO DLS COMBUSTÍVEIS LTDA')]).toEqual(['dls']);
+    expect([...distinctiveTokens('Posto Verão Petrobras')]).toEqual(['verao']);
+    expect(distinctiveTokens('Posto BR').size).toBe(0);
+  });
+});
+
+describe('resolveByName', () => {
+  const n = (id: string, name: string, brand = 'Não informada') => ({ id, name, brand });
+
+  it('matches when every distinctive word of the station is in the ANP name', () => {
+    expect(
+      resolveByName(
+        [n('a', 'Posto DLS Petrobras', 'Petrobras')],
+        'POSTO DLS COMBUSTIVEIS LTDA',
+        'VIBRA',
+      ),
+    ).toEqual({ kind: 'matched', id: 'a' });
+  });
+
+  it('never matches on a name with nothing distinctive (e.g. "Posto BR")', () => {
+    expect(resolveByName([n('a', 'Posto BR')], 'POSTO BR COMBUSTIVEIS LTDA', 'VIBRA')).toEqual({
+      kind: 'none',
+    });
+  });
+
+  it('rejects an incompatible brand and non-matching names', () => {
+    expect(
+      resolveByName(
+        [n('a', 'Posto DLS Shell', 'Shell')],
+        'POSTO DLS COMBUSTIVEIS LTDA',
+        'IPIRANGA',
+      ),
+    ).toEqual({ kind: 'none' });
+    expect(resolveByName([n('a', 'Posto Javaé')], 'POSTO DLS COMBUSTIVEIS LTDA', 'BRANCA')).toEqual(
+      {
+        kind: 'none',
+      },
+    );
+  });
+
+  it('is ambiguous when two stations match equally', () => {
+    expect(
+      resolveByName([n('a', 'Posto DLS'), n('b', 'DLS Combustíveis')], 'POSTO DLS LTDA', 'BRANCA'),
+    ).toEqual({ kind: 'ambiguous', ids: ['a', 'b'] });
   });
 });
 

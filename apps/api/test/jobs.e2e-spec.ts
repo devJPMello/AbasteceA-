@@ -412,6 +412,18 @@ describe('Background jobs (e2e, real Postgres + Redis)', () => {
       expect(await prisma.station.count()).toBe(3); // neighbour + 2 created from ANP
     });
 
+    it('falls back to the station name when the address cannot be geocoded', async () => {
+      // "RUA SEM GEOCODIFICACAO" is not located by the fake geocoder; its name is.
+      const osmId = await insertOsmStation('Posto Ficticio Tres', 'Não informada', at(2000));
+      const summary = await importer.importFromText(csv);
+      expect(summary.stationsMatched).toBe(1);
+      const station = await prisma.station.findUniqueOrThrow({ where: { id: osmId } });
+      expect(station.cnpj).toBe('33333333000133');
+      expect(await prisma.priceReport.count({ where: { stationId: osmId, source: 'ANP' } })).toBe(
+        1,
+      );
+    });
+
     it('is idempotent once matched', async () => {
       await insertOsmStation('Posto JK', 'Ipiranga', at(320));
       await importer.importFromText(csv);

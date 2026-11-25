@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { latestPerStationFuel, parseAnpCsv, type AnpRow } from './anp-csv';
 import { UNKNOWN_ADDRESS, UNKNOWN_BRAND } from '../stations/station-defaults';
 import { GEOCODER, type Geocoder } from './geocoder';
-import { resolveCandidates } from './station-matching';
+import { resolveByName, resolveCandidates } from './station-matching';
 
 export interface ImportSummary {
   rowsRead: number;
@@ -136,6 +136,10 @@ export class AnpImportService {
       .join(', ');
     const point = await this.geocoder.geocode(query);
     if (!point) {
+      // Palmas' block addresses ("QUADRA 406 NORTE AV NS 6") are often not understood by the
+      // geocoder. Fall back to the station NAME among stations without a CNPJ.
+      const byName = await this.matchByName(cnpj, row);
+      if (byName) return byName;
       this.logger.warn(`Skipping station ${cnpj}: address could not be geocoded`);
       return { id: null, outcome: 'ungeocoded' };
     }
@@ -156,16 +160,8 @@ export class AnpImportService {
       );
       return { id: null, outcome: 'ambiguous' };
     }
-    if (match.kind === 'matched') {
-      // Guarded by cnpj IS NULL: if another row claimed the station meanwhile, nothing changes.
-      // Only fills what we did not know (placeholders); never overwrites good data.
-      const updated = await this.prisma.$executeRaw`
-        UPDATE stations
-        SET cnpj = ${cnpj},
-            brand = CASE WHEN brand = ${UNKNOWN_BRAND} THEN ${row.brand} ELSE brand END,
-            address = CASE WHEN address = ${UNKNOWN_ADDRESS} THEN ${row.address} ELSE address END
-        WHERE id = ${match.id}::uuid AND cnpj IS NULL`;
-      if (updated === 1) return { id: match.id, outcome: 'matched' };
+    if (match.kind === 'matched' && (await this.claimStation(match.id, cnpj, row))) {
+      return { id: match.id, outcome: 'matched' };
     }
 
     const id = randomUUID();
@@ -175,6 +171,43 @@ export class AnpImportService {
               ${city}, 'ANP'::station_source,
               ST_SetSRID(ST_MakePoint(${point.lng}, ${point.lat}), 4326)::geography)`;
     return { id, outcome: 'created' };
+  }
+
+  /**
+   * Guarded by cnpj IS NULL: if another row claimed the station meanwhile, nothing changes.
+   * Only fills what we did not know (placeholders); never overwrites good data.
+   */
+  private async claimStation(id: string, cnpj: string, row: AnpRow): Promise<boolean> {
+    const updated = await this.prisma.$executeRaw`
+      UPDATE stations
+      SET cnpj = ${cnpj},
+          brand = CASE WHEN brand = ${UNKNOWN_BRAND} THEN ${row.brand} ELSE brand END,
+          address = CASE WHEN address = ${UNKNOWN_ADDRESS} THEN ${row.address} ELSE address END
+      WHERE id = ${id}::uuid AND cnpj IS NULL`;
+    return updated === 1;
+  }
+
+  /** Name-based fallback for rows that could not be located. Null = no usable match. */
+  private async matchByName(
+    cnpj: string,
+    row: AnpRow,
+  ): Promise<{ id: string | null; outcome: 'matched' | 'ambiguous' } | null> {
+    const candidates = await this.prisma.$queryRaw<{ id: string; name: string; brand: string }[]>`
+      SELECT id, name, brand FROM stations WHERE cnpj IS NULL`;
+    const match = resolveByName(candidates, row.stationName, row.brand);
+    if (match.kind === 'ambiguous') {
+      this.logger.warn(
+        `Station ${cnpj} (${row.stationName}) matches ${match.ids.length} stations by name (${match.ids.join(', ')}): skipped, not guessed`,
+      );
+      return { id: null, outcome: 'ambiguous' };
+    }
+    if (match.kind === 'matched' && (await this.claimStation(match.id, cnpj, row))) {
+      this.logger.log(
+        `Station ${cnpj} (${row.stationName}) matched by name (address not geocodable)`,
+      );
+      return { id: match.id, outcome: 'matched' };
+    }
+    return null;
   }
 
   /** Returns true when a new report was stored (false = already imported before). */
