@@ -79,3 +79,12 @@ export const priceHistoryQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).default(30),
 });
 export type PriceHistoryQuery = z.infer<typeof priceHistoryQuerySchema>;
+
+export const MAX_ALERTS_PER_USER = 10;
+
+export const createAlertSchema = coordinates.extend({
+  fuelType: FuelType,
+  targetPriceMilli: priceMilli,
+  radiusMeters: z.number().int().min(500).max(50000),
+});
+export type CreateAlertInput = z.infer<typeof createAlertSchema>;
