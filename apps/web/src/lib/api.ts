@@ -13,7 +13,7 @@ export class ApiError extends Error {
 }
 
 interface Options {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'DELETE';
   body?: unknown;
   query?: Record<string, string | number | undefined>;
 }

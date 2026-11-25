@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useConfirmReport, usePendingReports } from '../../hooks/queries';
 import { ApiError } from '../../lib/api';
 import { useSession } from '../../lib/session';
+import { Badge } from '../atoms/Badge';
 import { Button } from '../atoms/Button';
 import { Card } from '../atoms/Card';
 
@@ -48,15 +49,21 @@ export function PendingReports({ stationId }: { stationId: string }) {
                   {formatRelative(r.reportedAt)} · {r.confirmationsCount}/{CONFIRMATIONS_REQUIRED}
                 </span>
               </span>
-              {current && (
-                <Button
-                  variant="soft"
-                  size="sm"
-                  loading={confirm.isPending && confirm.variables === r.id}
-                  onClick={() => onConfirm(r.id)}
-                >
-                  Confirmar
-                </Button>
+              {r.isMine ? (
+                <Badge>Seu reporte</Badge>
+              ) : r.confirmedByMe ? (
+                <Badge tone="success">Você confirmou</Badge>
+              ) : (
+                current && (
+                  <Button
+                    variant="soft"
+                    size="sm"
+                    loading={confirm.isPending && confirm.variables === r.id}
+                    onClick={() => onConfirm(r.id)}
+                  >
+                    Confirmar
+                  </Button>
+                )
               )}
             </Card>
           </li>
