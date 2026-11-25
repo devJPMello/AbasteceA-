@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/coverage
+**/.expo
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+# Not needed by the API image (only their package.json is copied)
+apps/web/src
+apps/web/public
+apps/mobile/app
+apps/mobile/src
+docs
+*.md
