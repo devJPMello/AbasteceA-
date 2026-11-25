@@ -97,3 +97,5 @@ export const registerDeviceSchema = z.object({
   platform: z.enum(['ios', 'android']),
 });
 export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;
+
+export * from './api-types';

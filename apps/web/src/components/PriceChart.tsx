@@ -37,8 +37,8 @@ export function PriceChart({ points }: { points: HistoryResponse['points'] }) {
             width={48}
           />
           <Tooltip
-            labelFormatter={(t: number) => new Date(t).toLocaleString('pt-BR')}
-            formatter={(v: number) => [formatPrice(v), 'Preço']}
+            labelFormatter={(t) => new Date(Number(t)).toLocaleString('pt-BR')}
+            formatter={(v) => [formatPrice(Number(v)), 'Preço']}
           />
           <Line type="stepAfter" dataKey="price" stroke="#0f766e" strokeWidth={2} dot />
         </LineChart>
