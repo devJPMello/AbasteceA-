@@ -13,5 +13,5 @@
     "incremental": true,
     "types": ["node", "jest"]
   },
-  "include": ["src", "test", "prisma/seed.ts"]
+  "include": ["src", "test", "scripts", "prisma/seed.ts"]
 }
