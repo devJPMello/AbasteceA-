@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import type { NearbyStation } from '../lib/types';
+import type { NearbyStation } from '../../lib/types';
 import { StationList } from './StationList';
 
 const base = { brand: 'Ipiranga', address: 'Quadra 104 Sul', lat: 0, lng: 0 };

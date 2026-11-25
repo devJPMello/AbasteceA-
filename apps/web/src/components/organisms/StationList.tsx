@@ -1,14 +1,12 @@
+import { formatDistance, type NearbyStation, type PriceBand } from '@bomba-certa/shared';
+import { MapPinOff } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDistance, formatPrice, formatRelative } from '../lib/format';
-import { BAND_LABEL, type PriceBand } from '../lib/priceBand';
-import type { NearbyStation } from '../lib/types';
-
-const BAND_STYLE: Record<PriceBand, string> = {
-  cheap: 'bg-green-100 text-green-800',
-  mid: 'bg-amber-100 text-amber-800',
-  expensive: 'bg-red-100 text-red-800',
-  none: 'bg-slate-100 text-slate-600',
-};
+import { cn } from '../../lib/cn';
+import { Skeleton } from '../atoms/Skeleton';
+import { BandBadge } from '../molecules/BandBadge';
+import { EmptyState } from '../molecules/EmptyState';
+import { PriceTag } from '../molecules/PriceTag';
 
 interface Props {
   stations: NearbyStation[];
@@ -18,50 +16,87 @@ interface Props {
 }
 
 export function StationList({ stations, bands, activeId, onSelect }: Props) {
+  const rows = useRef(new Map<string, HTMLLIElement>());
+
+  // Keep the selected station visible when it was picked on the map.
+  useEffect(() => {
+    if (activeId)
+      rows.current.get(activeId)?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [activeId]);
+
   if (stations.length === 0) {
-    return <p className="p-4 text-sm text-slate-600">Nenhum posto neste raio. Tente aumentá-lo.</p>;
+    return (
+      <EmptyState
+        icon={MapPinOff}
+        title="Nenhum posto neste raio"
+        description="Aumente o raio de busca ou troque o combustível."
+      />
+    );
   }
+
   return (
-    <ul className="divide-y divide-slate-200">
+    <ul className="divide-y divide-border">
       {stations.map((s, i) => {
-        const band = bands[i] ?? 'none';
+        const active = s.id === activeId;
         return (
           <li
             key={s.id}
-            className={`cursor-pointer p-3 hover:bg-slate-100 ${s.id === activeId ? 'bg-teal-50' : ''}`}
-            onClick={() => onSelect(s.id)}
+            ref={(el) => {
+              if (el) rows.current.set(s.id, el);
+              else rows.current.delete(s.id);
+            }}
+            className={cn('transition-colors', active ? 'bg-primary-soft' : 'hover:bg-muted')}
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <Link
-                  to={`/stations/${s.id}`}
-                  className="block truncate font-semibold text-brand hover:underline"
-                >
-                  {s.name}
-                </Link>
-                <p className="truncate text-xs text-slate-500">{s.address}</p>
-                <p className="mt-1 text-xs text-slate-600">{formatDistance(s.distanceMeters)}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-lg font-bold">
-                  {s.price ? formatPrice(s.price.priceMilli) : '—'}
-                </p>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${BAND_STYLE[band]}`}
-                >
-                  {BAND_LABEL[band]}
+            <button
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelect(s.id)}
+              className="flex w-full items-start justify-between gap-3 px-4 pt-3 text-left"
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{s.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">{s.address}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {formatDistance(s.distanceMeters)}
                 </span>
-                {s.price?.stale && (
-                  <p className="mt-1 text-xs font-medium text-amber-700">
-                    Desatualizado
-                    {s.price.reportedAt ? ` · ${formatRelative(s.price.reportedAt)}` : ''}
-                  </p>
-                )}
-              </div>
+              </span>
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                <PriceTag price={s.price} compact emptyLabel="—" />
+                <BandBadge band={bands[i] ?? 'none'} />
+              </span>
+            </button>
+            <div className="px-4 pb-3 pt-1">
+              <Link
+                to={`/stations/${s.id}`}
+                aria-label={`Ver detalhes de ${s.name}`}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Ver detalhes →
+              </Link>
             </div>
           </li>
         );
       })}
     </ul>
+  );
+}
+
+export function StationListSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div role="status" aria-label="Carregando postos" className="divide-y divide-border">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-start justify-between gap-3 px-4 py-3">
+          <div className="w-2/3 space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-1/4" />
+          </div>
+          <div className="flex w-1/4 flex-col items-end gap-2">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-4 w-2/3 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
