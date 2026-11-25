@@ -26,6 +26,15 @@ enum PriceSource {
   @@map("price_source")
 }
 
+/// Where a station record came from. Kept apart from PriceSource (the origin of a PRICE).
+enum StationSource {
+  USER
+  ANP
+  OSM
+
+  @@map("station_source")
+}
+
 enum ReportStatus {
   PENDING
   ACTIVE
@@ -76,7 +85,7 @@ model Station {
   city          String                @default("Palmas")
   /// WGS84 point. Queried with raw SQL (ST_DWithin / ST_Distance); Prisma cannot read it.
   location      Unsupported("geography(Point,4326)")
-  source        PriceSource           @default(USER)
+  source        StationSource         @default(USER)
   createdAt     DateTime              @default(now()) @map("created_at")
   reports       PriceReport[]
   currentPrices StationCurrentPrice[]
