@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.config.js',
       '**/.expo/**',
+      '**/storybook-static/**',
     ],
   },
   js.configs.recommended,
