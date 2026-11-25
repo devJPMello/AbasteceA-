@@ -9,3 +9,6 @@ allowBuilds:
   esbuild: true
   msgpackr-extract: false
   prisma: true
+publicHoistPattern:
+  - '@types/react'
+  - '@types/react-dom'
