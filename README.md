@@ -36,13 +36,13 @@ garante dados mesmo sem usuários, e alertas de preço avisam quando algum posto
 
 ### Regras de negócio
 
-| Regra                                                                                              | Como é feita                                                                                        |
-| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| O preço exibido é o reporte mais recente com no máximo 7 dias; mais antigo aparece "desatualizado" | `station_current_prices` + flag `stale` calculada na resposta                                       |
-| Reporte fora da faixa plausível fica pendente                                                      | Mediana da cidade ±15% (configurável), referência da **ANP** primeiro; fora da faixa vira `PENDING` |
-| Outros usuários podem confirmar; confirmados têm mais peso                                         | 2 confirmações de usuários diferentes (nunca o autor) ativam o reporte                              |
-| Um reporte por usuário, posto e combustível a cada 6 horas                                         | Checagem no serviço sobre índice `(user, posto, combustível, data)`; responde 429                   |
-| Dados da ANP e dos usuários marcados com a origem                                                  | Enum `PriceSource` (`USER` \| `ANP`) em postos e reportes                                           |
+| Regra                                                                                              | Como é feita                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| O preço exibido é o reporte mais recente com no máximo 7 dias; mais antigo aparece "desatualizado" | `station_current_prices` + flag `stale` calculada na resposta                                                                                                                        |
+| Reporte fora da faixa plausível fica pendente                                                      | Mediana da cidade ±15% (configurável), referência da **ANP** primeiro; fora da faixa vira `PENDING`                                                                                  |
+| Outros usuários podem confirmar; confirmados têm mais peso                                         | 2 confirmações de usuários diferentes (nunca o autor) tiram o reporte de `PENDING`. **O "peso" é só esse portão**: não há ponderação entre reportes já ativos (o mais recente vence) |
+| Um reporte por usuário, posto e combustível a cada 6 horas                                         | Checagem no serviço sobre índice `(user, posto, combustível, data)`; responde 429                                                                                                    |
+| Dados da ANP e dos usuários marcados com a origem                                                  | Enum `PriceSource` (`USER` \| `ANP`) em postos e reportes                                                                                                                            |
 
 ## Arquitetura
 
@@ -238,5 +238,14 @@ Gratuito: **Render** (API + Redis) + **Neon** (PostgreSQL com PostGIS) + **Cloud
 - **Mobile**: validado por typecheck, testes e _bundle_ do Metro, **não** em aparelho. Push exige projeto EAS e _development build_.
 - Eventos de preço são publicados após o _commit_ (_best effort_): se o Redis cair, o preço é salvo mas o alerta atrasa. Um _outbox_ transacional resolveria.
 - O mobile ainda não tem a lista de reportes pendentes (só o web), e o sino do web atualiza por _polling_ de 1 min (mais um _refetch_ logo após criar um alerta), não em tempo real: um WebSocket/SSE seria a evolução.
-- Sem administração/moderação além das confirmações entre usuários.
+- Sem administração/moderação além das confirmações entre usuários. **Qualquer usuário logado pode cadastrar postos** (`POST /stations`),
+  sem deduplicação (um posto igual ao da ANP vira duplicado) e só com o limite global de requisições: um ponto a endurecer antes de abrir ao público.
+- `refresh_tokens` expirados e `notifications` antigas **nunca são removidos**: falta um job de limpeza (o BullMQ já está aí para isso).
+- O limitador de requisições (`@nestjs/throttler`) guarda contadores em memória: com mais de uma instância da API eles não são compartilhados
+  (a solução é o _storage_ em Redis).
+- A checagem das 6 horas por usuário/posto/combustível é "ler e depois inserir": duas requisições simultâneas podem passar. É raro e de baixo
+  impacto aqui; uma restrição única no banco resolveria.
+- Headers de segurança: a API usa `helmet` e o web usa o `_headers` do Pages. Falta uma **Content-Security-Policy** no web (precisa da origem da API
+  de produção e de um hash para o script inline do tema).
+- Faltam `LICENSE` e análise de dependências automatizada (Dependabot/`pnpm audit` no CI). O `pnpm audit` tem avisos em ferramentas do Expo e no `nodemailer`.
 - No plano gratuito do Render a API hiberna (ver [DEPLOY.md](DEPLOY.md#limitações-do-plano-gratuito)).
