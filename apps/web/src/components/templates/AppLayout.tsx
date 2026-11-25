@@ -4,9 +4,12 @@ import { Link, Outlet } from 'react-router-dom';
 import { session, useSession } from '../../lib/session';
 import { Button, buttonVariants } from '../atoms/Button';
 import { AppToaster } from '../molecules/AppToaster';
+import { ConnectionStatus } from '../molecules/ConnectionStatus';
 import { ErrorBoundary } from '../molecules/ErrorBoundary';
+import { InstallButton } from '../molecules/InstallButton';
 import { ThemeToggle } from '../molecules/ThemeToggle';
 import { NotificationBell } from '../organisms/NotificationBell';
+import { PwaPrompts } from '../organisms/PwaPrompts';
 
 export function AppLayout() {
   const current = useSession();
@@ -32,6 +35,7 @@ export function AppLayout() {
           Bomba Certa
         </Link>
         <nav aria-label="Principal" className="flex items-center gap-1">
+          <InstallButton />
           <ThemeToggle />
           {current ? (
             <>
@@ -55,12 +59,14 @@ export function AppLayout() {
           )}
         </nav>
       </header>
+      <ConnectionStatus />
       <main id="conteudo" className="min-h-0 flex-1">
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
       </main>
       <AppToaster />
+      <PwaPrompts />
     </div>
   );
 }
