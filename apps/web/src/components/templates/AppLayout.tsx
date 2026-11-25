@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Fuel } from 'lucide-react';
 import { Link, Outlet } from 'react-router-dom';
 import { session, useSession } from '../../lib/session';
@@ -5,9 +6,18 @@ import { Button, buttonVariants } from '../atoms/Button';
 import { AppToaster } from '../molecules/AppToaster';
 import { ErrorBoundary } from '../molecules/ErrorBoundary';
 import { ThemeToggle } from '../molecules/ThemeToggle';
+import { NotificationBell } from '../organisms/NotificationBell';
 
 export function AppLayout() {
   const current = useSession();
+  const queryClient = useQueryClient();
+
+  function logout() {
+    session.clear();
+    // Personal data (alerts, notifications, "is this report mine?") must not outlive the session.
+    queryClient.clear();
+  }
+
   return (
     <div className="flex h-full flex-col">
       <a
@@ -25,10 +35,11 @@ export function AppLayout() {
           <ThemeToggle />
           {current ? (
             <>
+              <NotificationBell />
               <span className="hidden px-2 text-sm text-muted-foreground sm:inline">
                 {current.user.name}
               </span>
-              <Button variant="secondary" size="sm" onClick={() => session.clear()}>
+              <Button variant="secondary" size="sm" onClick={logout}>
                 Sair
               </Button>
             </>
