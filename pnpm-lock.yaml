@@ -83,6 +83,9 @@ importers:
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
+      prisma:
+        specifier: ^6.2.1
+        version: 6.19.3(typescript@5.9.3)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -123,9 +126,6 @@ importers:
       pino-pretty:
         specifier: ^13.2.0
         version: 13.2.0
-      prisma:
-        specifier: ^6.2.1
-        version: 6.19.3(typescript@5.9.3)
       supertest:
         specifier: ^7.3.2
         version: 7.3.2
@@ -135,6 +135,9 @@ importers:
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   apps/mobile:
     dependencies:
@@ -291,6 +294,9 @@ importers:
       tsup:
         specifier: ^8.3.5
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.33)(tsx@4.23.15)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@26.6.6)(jiti@2.7.0)(jsdom@31.0.1(@noble/hashes@1.8.0))(lightningcss@1.33.0)(terser@5.51.4)(tsx@4.23.15)

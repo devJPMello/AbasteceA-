@@ -35,6 +35,7 @@
     "nodemailer": "^6.10.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
+    "prisma": "^6.2.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^3.25.76"
@@ -50,12 +51,16 @@
     "@types/supertest": "^7.2.1",
     "jest": "^29.7.0",
     "pino-pretty": "^13.2.0",
-    "prisma": "^6.2.1",
     "supertest": "^7.3.2",
     "ts-jest": "^29.4.15",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
-  }
+  },
+  "files": [
+    "dist",
+    "prisma"
+  ]
 }
