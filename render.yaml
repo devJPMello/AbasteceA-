@@ -1,10 +1,49 @@
 # Render Blueprint: infrastructure as code for the API and its Redis.
-# PostgreSQL (with PostGIS) lives on Neon; the web app on Cloudflare Pages. See DEPLOY.md.
+# PostgreSQL (with PostGIS) lives on Neon; the web app is a Render static site. See DEPLOY.md.
 #
 # NOTE: written from Render's Blueprint reference but NOT validated against Render (no CLI/account
 # here). If the dashboard rejects a field, DEPLOY.md lists the equivalent manual settings.
 
 services:
+  # React app (Vite build), served as static files. SPA fallback + PWA-friendly cache headers.
+  - type: web
+    name: bomba-certa-web
+    runtime: static
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @bomba-certa/web build
+    staticPublishPath: apps/web/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: VITE_API_URL
+        value: https://bomba-certa-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: geolocation=(self), camera=(), microphone=(), payment=()
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+
   - type: web
     name: bomba-certa-api
     runtime: docker
@@ -32,9 +71,9 @@ services:
       # Neon DIRECT connection, used only to run migrations on boot.
       - key: DIRECT_URL
         sync: false
-      # URL of the Cloudflare Pages site, e.g. https://bomba-certa.pages.dev
+      # The static site below (CORS must allow exactly this origin).
       - key: CORS_ORIGIN
-        sync: false
+        value: https://bomba-certa-web.onrender.com
       # Turn on only after confirming the dataset link (see DEPLOY.md).
       - key: ANP_IMPORT_ENABLED
         value: 'false'

@@ -1,4 +1,7 @@
-# Deploy gratuito: Render + Neon + Cloudflare Pages
+# Deploy gratuito: Render + Neon
+
+> **Atualização:** o front agora também é um _static site_ do Render, definido no [render.yaml](render.yaml) (`bomba-certa-web`), no lugar do
+> Cloudflare Pages. O passo 4 abaixo (Cloudflare) continua válido como alternativa.
 
 ```
 Cloudflare Pages (web, estático)  ──HTTPS──►  Render (API NestJS, Docker)  ──►  Neon (PostgreSQL + PostGIS)
