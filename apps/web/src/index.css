@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: #0f766e;
+  --color-brand-dark: #115e59;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Price markers on the Leaflet map */
+.price-marker {
+  display: inline-block;
+  transform: translate(-50%, -100%);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  color: #fff;
+  font:
+    700 12px/1.4 system-ui,
+    sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+.price-marker--cheap {
+  background: #15803d;
+}
+.price-marker--mid {
+  background: #b45309;
+}
+.price-marker--expensive {
+  background: #b91c1c;
+}
+.price-marker--none {
+  background: #6b7280;
+}
+.price-marker--stale {
+  opacity: 0.65;
+  border-style: dashed;
+}
+.price-marker--active {
+  outline: 3px solid #0f766e;
+}
