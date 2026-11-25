@@ -15,7 +15,7 @@
   --muted: #f1f5f9;
   --muted-foreground: #475569;
   --border: #e2e8f0;
-  --input: #cbd5e1;
+  --input: #7b8ba1;
   --ring: #0f766e;
 
   --primary: #0f766e;
@@ -23,12 +23,12 @@
   --primary-soft: #ccfbf1;
   --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
-  --success: #15803d;
-  --warning: #b45309;
+  --success: #166534;
+  --warning: #92400e;
 
   /* Price bands. Never rely on colour alone: each band also has an icon/shape. */
-  --band-cheap: #15803d;
-  --band-mid: #b45309;
+  --band-cheap: #166534;
+  --band-mid: #92400e;
   --band-expensive: #b91c1c;
   --band-none: #6b7280;
   --band-foreground: #ffffff;
@@ -47,7 +47,7 @@
   --muted: #162136;
   --muted-foreground: #9fb0c7;
   --border: #223049;
-  --input: #2f3f5c;
+  --input: #62779a;
   --ring: #2dd4bf;
 
   --primary: #2dd4bf;
