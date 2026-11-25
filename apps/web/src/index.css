@@ -1,46 +1,260 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-brand: #0f766e;
-  --color-brand-dark: #115e59;
+/* Dark mode is driven by a `.dark` class on <html> (set by ThemeProvider / the inline script). */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens. Components only use semantic names (bg-card, text-muted-foreground, ...), so a
+ * theme is just a different set of values here. Colour pairs were chosen for WCAG AA contrast.
+ */
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #0f766e;
+
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --primary-soft: #ccfbf1;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --warning: #b45309;
+
+  /* Price bands. Never rely on colour alone: each band also has an icon/shape. */
+  --band-cheap: #15803d;
+  --band-mid: #b45309;
+  --band-expensive: #b91c1c;
+  --band-none: #6b7280;
+  --band-foreground: #ffffff;
+
+  --radius: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
+  --shadow-float: 0 8px 24px rgb(15 23 42 / 0.16);
 }
 
-html,
-body,
-#root {
-  height: 100%;
+.dark {
+  color-scheme: dark;
+  --background: #0b1220;
+  --foreground: #e6edf7;
+  --card: #111a2c;
+  --card-foreground: #e6edf7;
+  --muted: #162136;
+  --muted-foreground: #9fb0c7;
+  --border: #223049;
+  --input: #2f3f5c;
+  --ring: #2dd4bf;
+
+  --primary: #2dd4bf;
+  --primary-foreground: #042f2e;
+  --primary-soft: #0f3a3a;
+  --destructive: #f87171;
+  --destructive-foreground: #1f0a0a;
+  --success: #4ade80;
+  --warning: #fbbf24;
+
+  --band-cheap: #4ade80;
+  --band-mid: #fbbf24;
+  --band-expensive: #f87171;
+  --band-none: #9ca3af;
+  --band-foreground: #0b1220;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.5);
 }
 
-/* Price markers on the Leaflet map */
-.price-marker {
-  display: inline-block;
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-band-cheap: var(--band-cheap);
+  --color-band-mid: var(--band-mid);
+  --color-band-expensive: var(--band-expensive);
+  --color-band-none: var(--band-none);
+  --color-band-foreground: var(--band-foreground);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  ::selection {
+    @apply bg-primary-soft text-foreground;
+  }
+}
+
+/* ---------- Skeleton (shimmer) ---------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--foreground) 8%, transparent),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------- Map ---------- */
+/* Dark map: invert the light OSM tiles instead of loading a second tile provider. */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.7);
+}
+.leaflet-container {
+  background: var(--muted);
+  font-family: inherit;
+}
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--card) 80%, transparent) !important;
+  color: var(--muted-foreground) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--primary) !important;
+}
+.leaflet-bar a {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.leaflet-bar a:hover {
+  background: var(--muted);
+}
+/* Touch screens zoom by pinching; the +/- buttons would only collide with the filter chips. */
+@media (pointer: coarse) {
+  .leaflet-control-zoom {
+    display: none;
+  }
+}
+.search-radius {
+  stroke: var(--primary);
+  fill: var(--primary);
+  fill-opacity: 0.06;
+}
+.leaflet-marker-icon:focus-visible {
+  outline: none;
+}
+.leaflet-marker-icon:focus-visible .price-pill {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.price-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   transform: translate(-50%, -100%);
-  padding: 2px 8px;
+  padding: 3px 9px 3px 7px;
   border-radius: 9999px;
-  border: 2px solid #fff;
-  color: #fff;
-  font:
-    700 12px/1.4 system-ui,
-    sans-serif;
+  border: 2px solid var(--card);
+  color: var(--band-foreground);
+  font: 700 12px/1.3 var(--font-sans, system-ui);
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  box-shadow: var(--shadow-float);
+  transition: transform 0.15s ease;
 }
-.price-marker--cheap {
-  background: #15803d;
+.price-pill svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
 }
-.price-marker--mid {
-  background: #b45309;
+.price-pill--cheap {
+  background: var(--band-cheap);
 }
-.price-marker--expensive {
-  background: #b91c1c;
+.price-pill--mid {
+  background: var(--band-mid);
 }
-.price-marker--none {
-  background: #6b7280;
+.price-pill--expensive {
+  background: var(--band-expensive);
 }
-.price-marker--stale {
-  opacity: 0.65;
+.price-pill--none {
+  background: var(--band-none);
+}
+.price-pill--stale {
+  opacity: 0.7;
   border-style: dashed;
 }
-.price-marker--active {
-  outline: 3px solid #0f766e;
+.price-pill--active {
+  transform: translate(-50%, -100%) scale(1.18);
+  box-shadow:
+    0 0 0 3px var(--ring),
+    var(--shadow-float);
+  z-index: 10;
+}
+
+.price-cluster {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 9999px;
+  border: 3px solid var(--card);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-float);
+  font: 700 13px/1.1 var(--font-sans, system-ui);
+  text-align: center;
+}
+.price-cluster small {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

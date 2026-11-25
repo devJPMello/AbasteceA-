@@ -2,9 +2,18 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Mapa colaborativo de preços de combustível em Palmas-TO" />
+    <meta name="color-scheme" content="light dark" />
     <title>Bomba Certa</title>
+    <!-- Applies the saved/system theme before first paint, so there is no flash of the wrong theme. -->
+    <script>
+      try {
+        var saved = localStorage.getItem('bomba-certa.theme');
+        var dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
