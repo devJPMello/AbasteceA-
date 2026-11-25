@@ -16,6 +16,9 @@ services:
         value: 22
       - key: VITE_API_URL
         value: https://bomba-certa-api.onrender.com
+      # Shows the "fictitious prices" notice while the database holds the demo seed.
+      - key: VITE_DEMO_DATA
+        value: 'true'
     routes:
       - type: rewrite
         source: /*

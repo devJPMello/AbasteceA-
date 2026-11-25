@@ -59,6 +59,12 @@ export function AppLayout() {
           )}
         </nav>
       </header>
+      {import.meta.env.VITE_DEMO_DATA === 'true' && (
+        <p className="shrink-0 border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-foreground">
+          Versão de demonstração: os postos vêm do OpenStreetMap, mas os{' '}
+          <strong>preços são fictícios</strong>. Cadastre-se e reporte o preço real que você viu.
+        </p>
+      )}
       <ConnectionStatus />
       <main id="conteudo" className="min-h-0 flex-1">
         <ErrorBoundary>
