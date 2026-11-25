@@ -9,6 +9,7 @@ import { AnpImportModule } from './anp-import/anp-import.module';
 import { AuthModule } from './auth/auth.module';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { Env, validateEnv } from './config/env';
+import { HealthController } from './health/health.controller';
 import { PricesModule } from './prices/prices.module';
 import { PrismaModule } from './prisma/prisma.service';
 import { QueuesModule } from './queues/queues.module';
@@ -55,6 +56,7 @@ import { UsersModule } from './users/users.module';
     StationsModule,
     PricesModule,
   ],
+  controllers: [HealthController],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

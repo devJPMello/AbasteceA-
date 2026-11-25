@@ -108,6 +108,13 @@ const noise = (i: number, j: number, k: number) => ((i * 7 + j * 13 + k * 31) % 
 
 async function main() {
   if (process.env.NODE_ENV === 'production') throw new Error('Refusing to seed in production');
+  // The seed TRUNCATEs tables: never run it against a remote database by accident.
+  const host = new URL(process.env.DATABASE_URL ?? 'postgresql://localhost').hostname;
+  if (!['localhost', '127.0.0.1', '::1'].includes(host) && process.env.SEED_CONFIRM !== 'yes') {
+    throw new Error(
+      `DATABASE_URL points to ${host}, not localhost. This seed erases data: set SEED_CONFIRM=yes to proceed.`,
+    );
+  }
 
   await prisma.$executeRawUnsafe(
     'TRUNCATE price_reports, station_current_prices, stations RESTART IDENTITY CASCADE',

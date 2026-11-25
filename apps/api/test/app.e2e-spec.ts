@@ -217,6 +217,13 @@ describe('Bomba Certa API (e2e, real PostGIS)', () => {
     });
   });
 
+  it('serves liveness and readiness probes', async () => {
+    const live = await http.get('/health').expect(200);
+    expect(live.body).toEqual({ status: 'ok' });
+    const ready = await http.get('/health/ready').expect(200);
+    expect(ready.body).toEqual({ status: 'ok', checks: { database: 'up', redis: 'up' } });
+  });
+
   it('exposes the OpenAPI document', async () => {
     const res = await http.get('/docs-json').expect(200);
     expect(Object.keys(res.body.paths)).toEqual(

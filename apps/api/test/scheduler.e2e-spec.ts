@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { Queue } from 'bullmq';
 import { ANP_IMPORT_QUEUE } from '../src/queues/queues.module';
+import type { AnpImportScheduler } from '../src/anp-import/anp-import.scheduler';
 
 describe('ANP weekly schedule (e2e, real Redis)', () => {
   const apps: INestApplication[] = [];
@@ -42,6 +43,14 @@ describe('ANP weekly schedule (e2e, real Redis)', () => {
 
     // A restart (or a second API instance) upserts the same scheduler id: still one.
     const second = await boot();
+    expect(await second.queue.getJobSchedulers()).toHaveLength(1);
+
+    // Redis may restart (ephemeral hosting) and forget the schedule: register() restores it.
+    await second.queue.removeJobScheduler('anp-weekly-import');
+    expect(await second.queue.getJobSchedulers()).toHaveLength(0);
+    const { AnpImportScheduler: Scheduler } =
+      await import('../src/anp-import/anp-import.scheduler');
+    await second.app.get<AnpImportScheduler>(Scheduler).register();
     expect(await second.queue.getJobSchedulers()).toHaveLength(1);
 
     // Do not leave a schedule behind in the shared test Redis.

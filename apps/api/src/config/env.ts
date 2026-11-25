@@ -11,6 +11,11 @@ const envSchema = z.object({
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(30),
   /** Reports further than this % from the city median wait for confirmations. */
   PRICE_PLAUSIBILITY_PCT: z.coerce.number().positive().max(100).default(15),
+  /** Set to true behind a reverse proxy (Render, Caddy...) so req.ip is the client, not the proxy. */
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 
   // --- Jobs ---

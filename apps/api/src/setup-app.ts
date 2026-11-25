@@ -11,6 +11,14 @@ export function setupApp(app: INestApplication) {
   app.useLogger(app.get(Logger));
   app.enableCors({ origin: config.get('CORS_ORIGIN', { infer: true }).split(',') });
   app.enableShutdownHooks();
+  // Without this, behind a proxy every request appears to come from the proxy's IP and the
+  // rate limiter would throttle all users together.
+  if (config.get('TRUST_PROXY', { infer: true })) {
+    (app.getHttpAdapter().getInstance() as { set: (k: string, v: unknown) => void }).set(
+      'trust proxy',
+      1,
+    );
+  }
 
   const document = SwaggerModule.createDocument(
     app,
