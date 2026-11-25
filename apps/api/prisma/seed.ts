@@ -1,100 +1,30 @@
 /**
- * Development seed: Palmas-TO stations with FICTITIOUS prices.
- * Station names and coordinates are approximate placeholders around real Palmas areas;
- * they are not verified against the real stations. Safe to re-run (it resets these tables).
+ * Development seed.
+ *
+ * STATIONS are REAL: a committed snapshot of OpenStreetMap data for Palmas-TO
+ * (prisma/data/palmas-osm-stations.json, © OpenStreetMap contributors, ODbL). It covers only what
+ * volunteers mapped, so it is incomplete, and names/brands may be out of date.
+ *
+ * PRICES are FICTITIOUS demo data (a formula around typical values, attributed to a "Seed Bot"
+ * user). Real prices come from users and from the ANP import.
+ *
+ * Safe to re-run: it resets stations, reports and current prices.
+ * Refresh the station snapshot with `pnpm --filter @bomba-certa/api osm:fetch`.
  */
 import { PrismaClient, type FuelType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { UNKNOWN_ADDRESS, UNKNOWN_BRAND } from '../src/stations/station-defaults';
+import type { OsmStation } from '../src/stations/osm-stations';
 
 const prisma = new PrismaClient();
 
-const STATIONS = [
-  {
-    name: 'Ipiranga Av. JK',
-    brand: 'Ipiranga',
-    address: 'Av. Juscelino Kubitschek, 104 Sul',
-    lat: -10.1887,
-    lng: -48.3318,
-  },
-  {
-    name: 'Shell Av. NS-01',
-    brand: 'Shell',
-    address: 'Av. NS-01, 302 Norte',
-    lat: -10.1695,
-    lng: -48.335,
-  },
-  {
-    name: 'Petrobras Teotônio Segurado',
-    brand: 'Petrobras',
-    address: 'Av. Teotônio Segurado, 502 Sul',
-    lat: -10.2005,
-    lng: -48.3342,
-  },
-  {
-    name: 'Ale Av. LO-27',
-    brand: 'Ale',
-    address: 'Av. LO-27, 603 Norte',
-    lat: -10.1621,
-    lng: -48.3265,
-  },
-  {
-    name: 'Ipiranga Aureny III',
-    brand: 'Ipiranga',
-    address: 'Av. Tocantins, Aureny III',
-    lat: -10.2412,
-    lng: -48.3128,
-  },
-  {
-    name: 'Raízen Taquaralto',
-    brand: 'Shell',
-    address: 'Av. Principal, Taquaralto',
-    lat: -10.3011,
-    lng: -48.3603,
-  },
-  {
-    name: 'Posto Bandeira Branca Plano Sul',
-    brand: 'Bandeira Branca',
-    address: 'ARSE 72, Plano Diretor Sul',
-    lat: -10.2146,
-    lng: -48.3375,
-  },
-  {
-    name: 'Petrobras Av. NS-04',
-    brand: 'Petrobras',
-    address: 'Av. NS-04, 906 Sul',
-    lat: -10.2331,
-    lng: -48.3299,
-  },
-  {
-    name: 'Ale Taquari',
-    brand: 'Ale',
-    address: 'Av. Taquari, Jardim Taquari',
-    lat: -10.2788,
-    lng: -48.3055,
-  },
-  {
-    name: 'Shell Orla',
-    brand: 'Shell',
-    address: 'Av. Parque, Orla da Praia da Graciosa',
-    lat: -10.1938,
-    lng: -48.3151,
-  },
-  {
-    name: 'Ipiranga Aeroporto',
-    brand: 'Ipiranga',
-    address: 'Av. Joaquim Teotônio Segurado, Aeroporto',
-    lat: -10.2414,
-    lng: -48.3532,
-  },
-  {
-    name: 'Posto Bandeira Branca Norte',
-    brand: 'Bandeira Branca',
-    address: 'ARNO 33, Plano Diretor Norte',
-    lat: -10.1553,
-    lng: -48.3329,
-  },
-];
+const snapshot = JSON.parse(
+  readFileSync(resolve(__dirname, 'data/palmas-osm-stations.json'), 'utf8'),
+) as { osmDataTimestamp: string; stations: OsmStation[] };
+const STATIONS = snapshot.stations;
 
 const BASE: Record<FuelType, number> = {
   GASOLINE_COMMON: 6190,
@@ -135,9 +65,11 @@ async function main() {
 
   for (const [i, s] of STATIONS.entries()) {
     const id = randomUUID();
+    // No CNPJ: OSM does not carry it. The ANP importer fills it in when it matches the station.
     await prisma.$executeRaw`
-      INSERT INTO stations (id, name, brand, address, location)
-      VALUES (${id}::uuid, ${s.name}, ${s.brand}, ${s.address},
+      INSERT INTO stations (id, name, brand, address, source, location)
+      VALUES (${id}::uuid, ${s.name}, ${s.brand ?? UNKNOWN_BRAND}, ${s.address ?? UNKNOWN_ADDRESS},
+              'OSM'::station_source,
               ST_SetSRID(ST_MakePoint(${s.lng}, ${s.lat}), 4326)::geography)`;
 
     for (const [j, fuel] of fuels.entries()) {
@@ -175,7 +107,9 @@ async function main() {
       }
     }
   }
-  console.log(`Seeded ${STATIONS.length} stations with fictitious prices.`);
+  console.log(
+    `Seeded ${STATIONS.length} real stations (OpenStreetMap data from ${snapshot.osmDataTimestamp}) with FICTITIOUS prices.`,
+  );
 }
 
 main()
