@@ -75,6 +75,7 @@ export function MapPage() {
 
   return (
     <div className="relative h-full md:grid md:grid-cols-[380px_1fr]">
+      <h1 className="sr-only">Preços de combustível perto de você</h1>
       {isDesktop && (
         <aside key="sidebar" className="flex min-h-0 flex-col border-r border-border bg-card">
           <div className="space-y-4 border-b border-border p-4">

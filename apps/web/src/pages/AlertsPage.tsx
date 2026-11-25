@@ -18,6 +18,7 @@ export function AlertsPage() {
   if (!session) {
     return (
       <EmptyState
+        titleAs="h1"
         className="pt-16"
         icon={BellRing}
         title="Entre para criar alertas"
