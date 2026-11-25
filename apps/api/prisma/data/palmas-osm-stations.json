@@ -1,0 +1,188 @@
+{
+  "source": "OpenStreetMap contributors",
+  "license": "ODbL 1.0 (https://www.openstreetmap.org/copyright)",
+  "osmDataTimestamp": "2026-11-25T18:42:21Z",
+  "bbox": {
+    "south": -10.4,
+    "west": -48.45,
+    "north": -10.05,
+    "east": -48.2
+  },
+  "rawElements": 38,
+  "dropped": {
+    "aviation": 2,
+    "duplicates": 0,
+    "noNameOrBrand": 15,
+    "noCoordinates": 0
+  },
+  "stations": [
+    {
+      "osmId": "node/4329384199",
+      "name": "Posto Verão",
+      "brand": "Petrobras",
+      "address": "Avenida LO-09, 19",
+      "lat": -10.2047542,
+      "lng": -48.3313597
+    },
+    {
+      "osmId": "node/5058446057",
+      "name": "Posto San Marino",
+      "brand": null,
+      "address": "Alameda 06, Plano Diretor Sul",
+      "lat": -10.1963119,
+      "lng": -48.3501005
+    },
+    {
+      "osmId": "node/5058691032",
+      "name": "Posto Farol",
+      "brand": null,
+      "address": null,
+      "lat": -10.2192778,
+      "lng": -48.3370744
+    },
+    {
+      "osmId": "node/5144254222",
+      "name": "Posto Star",
+      "brand": null,
+      "address": null,
+      "lat": -10.2219042,
+      "lng": -48.3297882
+    },
+    {
+      "osmId": "node/5144254228",
+      "name": "Posto Central",
+      "brand": null,
+      "address": null,
+      "lat": -10.218016,
+      "lng": -48.3314538
+    },
+    {
+      "osmId": "node/5516553081",
+      "name": "Posto Eldorado 2",
+      "brand": null,
+      "address": null,
+      "lat": -10.1655574,
+      "lng": -48.3469398
+    },
+    {
+      "osmId": "node/5990552324",
+      "name": "Posto JK",
+      "brand": "Shell",
+      "address": null,
+      "lat": -10.1828392,
+      "lng": -48.3075614
+    },
+    {
+      "osmId": "node/6331533769",
+      "name": "Posto BR",
+      "brand": null,
+      "address": "TO-070",
+      "lat": -10.3394033,
+      "lng": -48.2999601
+    },
+    {
+      "osmId": "node/6331534396",
+      "name": "Posto BR",
+      "brand": null,
+      "address": null,
+      "lat": -10.2479025,
+      "lng": -48.3116687
+    },
+    {
+      "osmId": "node/9412640395",
+      "name": "Ipiranga",
+      "brand": "Ipiranga",
+      "address": null,
+      "lat": -10.1686787,
+      "lng": -48.3178024
+    },
+    {
+      "osmId": "node/9412645746",
+      "name": "Posto Tucunaré",
+      "brand": null,
+      "address": null,
+      "lat": -10.1863499,
+      "lng": -48.3135683
+    },
+    {
+      "osmId": "node/12398405967",
+      "name": "Posto Petrobras",
+      "brand": null,
+      "address": null,
+      "lat": -10.2316059,
+      "lng": -48.3246265
+    },
+    {
+      "osmId": "node/12496885430",
+      "name": "Posto San Marino",
+      "brand": null,
+      "address": null,
+      "lat": -10.2352816,
+      "lng": -48.3182648
+    },
+    {
+      "osmId": "node/13300571402",
+      "name": "Petrolider",
+      "brand": null,
+      "address": null,
+      "lat": -10.1827859,
+      "lng": -48.3429296
+    },
+    {
+      "osmId": "way/516503458",
+      "name": "Posto Javaé",
+      "brand": "Petrobras",
+      "address": "Avenida LO-11, 24",
+      "lat": -10.2113112,
+      "lng": -48.3354047
+    },
+    {
+      "osmId": "way/516503459",
+      "name": "Posto Primavera",
+      "brand": "Petrobras",
+      "address": "Avenida NS-2",
+      "lat": -10.1929183,
+      "lng": -48.3298324
+    },
+    {
+      "osmId": "way/516503462",
+      "name": "Posto Eldorado",
+      "brand": "Petrobras",
+      "address": "Avenida NS-4",
+      "lat": -10.1930821,
+      "lng": -48.3243325
+    },
+    {
+      "osmId": "way/527402985",
+      "name": "Posto DLS",
+      "brand": "Petrobras",
+      "address": "Avenida LO-15, 20",
+      "lat": -10.2244672,
+      "lng": -48.3353343
+    },
+    {
+      "osmId": "way/540274075",
+      "name": "Petro",
+      "brand": null,
+      "address": null,
+      "lat": -10.1933255,
+      "lng": -48.3372843
+    },
+    {
+      "osmId": "way/617465303",
+      "name": "Posto Petroshop",
+      "brand": "Ipiranga",
+      "address": "Quadra 412 Norte Alameda 06, 1, Plano Diretor Norte",
+      "lat": -10.170208,
+      "lng": -48.3010098
+    },
+    {
+      "osmId": "way/707638955",
+      "name": "Posto Disbrava",
+      "brand": "Ipiranga",
+      "address": "Quadra 405 Norte Avenida NS-5, Plano Diretor Norte",
+      "lat": -10.1609277,
+      "lng": -48.3462714
+    }
+  ]
+}
