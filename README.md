@@ -127,8 +127,8 @@ pnpm lint
 pnpm format:check
 pnpm typecheck
 pnpm --filter @bomba-certa/shared test      # 9
-pnpm --filter @bomba-certa/api test         # 52 unitários
-pnpm --filter @bomba-certa/api test:e2e     # 29, contra PostgreSQL/PostGIS e Redis reais
+pnpm --filter @bomba-certa/api test         # 57 unitários
+pnpm --filter @bomba-certa/api test:e2e     # 30, contra PostgreSQL/PostGIS e Redis reais
 pnpm --filter @bomba-certa/web test         # 161 (inclui contraste dos tokens e axe)
 pnpm --filter @bomba-certa/web storybook    # catálogo de componentes em http://localhost:6006
 pnpm --filter @bomba-certa/mobile test      # 5
@@ -243,12 +243,13 @@ Gratuito: **Render** (API + Redis) + **Neon** (PostgreSQL com PostGIS) + **Cloud
 
 ## Limitações conhecidas e próximos passos
 
-- **ANP**: o arquivo real (dados abertos da ANP, série mensal por produto, ex.: `dsan/2026/07-dados-abertos-precos-gasolina-etanol.csv`)
-  tem o formato que o parser espera, e o importador rodou com ele. Mas o levantamento da ANP é uma **amostra**: em julho/2026 Palmas aparece
-  com só **3 postos** (gasolina e etanol), e o Nominatim **não geocodifica** os endereços por quadra da ANP (`QNE 14`, `ARSE 61`): nenhum dos 3 foi
-  localizado, então nenhum preço entrou. Cair para "só a rua" daria um ponto qualquer de uma avenida longa, por isso não foi feito. Na prática, os preços de
-  Palmas vêm dos usuários; a ANP só ajudaria com um geocodificador melhor ou um mapa CNPJ → coordenadas.
-  Postos cadastrados por usuários sem CNPJ só casam com a ANP por proximidade + bandeira (veja _Fontes de dados_).
+- **ANP**: testei com os arquivos reais de outubro/2026 (`dsan/2026/10-gasolina-etanol.csv` e `10-diesel-gnv.csv`): têm o formato esperado e
+  **23 postos de Palmas** (em julho eram 3: o levantamento é uma amostra). O Nominatim **não geocodifica** os endereços por quadra da ANP
+  (`QUADRA 406 NORTE AV NS 6`), então a localização falha em todos. Para não depender dela, o importador cai para o **nome**: casa quando todas as
+  palavras distintivas do nome do posto no OSM aparecem na razão social da ANP e a bandeira é compatível. Resultado real: **3 de 23 casaram**
+  (Disbrava, DLS, Petroshop); os outros têm razão social sem relação com o nome fantasia, ou não estão no OSM, e ficam de fora (nunca chutados).
+  Cair para "só a rua" daria um ponto qualquer de uma avenida longa, por isso não foi feito. Na prática os preços de Palmas vêm sobretudo dos
+  usuários; um geocodificador melhor ou um mapa CNPJ → coordenadas ampliaria a cobertura.
 - **OpenStreetMap**: a cobertura de Palmas é pequena (21 postos úteis no _snapshot_; 17 de 38 elementos foram descartados por
   serem de aviação ou não terem nome nem bandeira). Nomes e bandeiras podem estar desatualizados, e a bandeira nunca é deduzida do nome.
 - **Casamento ANP ↔ OSM**: em quarteirões com vários postos da mesma bandeira o caso é ambíguo e o posto é **ignorado e registrado**,

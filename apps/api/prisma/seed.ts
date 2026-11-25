@@ -26,11 +26,13 @@ const snapshot = JSON.parse(
 ) as { osmDataTimestamp: string; stations: OsmStation[] };
 const STATIONS = snapshot.stations;
 
+// Rough Palmas averages (ANP, week of 15-21/11/2026: gasoline R$ 7,02, ethanol R$ 5,04, diesel S10 R$ 7,46).
+// Still fictitious per station: only the order of magnitude is real.
 const BASE: Record<FuelType, number> = {
-  GASOLINE_COMMON: 6190,
-  GASOLINE_PREMIUM: 6490,
-  ETHANOL: 4590,
-  DIESEL_S10: 6090,
+  GASOLINE_COMMON: 6990,
+  GASOLINE_PREMIUM: 7110,
+  ETHANOL: 5040,
+  DIESEL_S10: 7460,
 };
 
 // Deterministic pseudo-noise so re-running gives the same data.
