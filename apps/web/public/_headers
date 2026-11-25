@@ -1,5 +1,20 @@
-# Cloudflare Pages headers. The service worker and the files that decide which version is live
-# must never be cached by the browser, or users could be stuck on an old release.
+# Cloudflare Pages headers.
+
+# Security headers for every response.
+#  - nosniff: the browser must trust the declared content types.
+#  - X-Frame-Options / frame-ancestors: the app cannot be embedded in another site (clickjacking).
+#  - Referrer-Policy: do not leak full URLs (they can contain station ids) to other origins.
+#  - Permissions-Policy: only geolocation is used (nearby stations); everything else stays off.
+# A Content-Security-Policy is a good next step, but it needs the production API origin in
+# `connect-src` and a hash for the inline theme script in index.html, so it is left to the deploy.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=()
+
+# The service worker and the files that decide which version is live must never be cached by the
+# browser, or users could be stuck on an old release.
 /sw.js
   Cache-Control: no-cache
 /index.html
@@ -7,6 +22,7 @@
 /manifest.webmanifest
   Content-Type: application/manifest+json
   Cache-Control: no-cache
+
 # Hashed build output is immutable.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
