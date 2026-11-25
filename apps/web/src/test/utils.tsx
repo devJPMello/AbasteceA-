@@ -7,7 +7,11 @@ import { vi } from 'vitest';
 import { session } from '../lib/session';
 
 /** Renders with the same providers as the app (query cache, router, toasts). */
-export function renderApp(ui: ReactElement, route = '/') {
+export function renderApp(
+  ui: ReactElement,
+  route = '/',
+  { toaster = true }: { toaster?: boolean } = {},
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -15,7 +19,7 @@ export function renderApp(ui: ReactElement, route = '/') {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         {ui}
-        <Toaster />
+        {toaster && <Toaster />}
       </MemoryRouter>
     </QueryClientProvider>,
   );
