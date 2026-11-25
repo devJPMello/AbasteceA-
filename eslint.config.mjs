@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/coverage/**',
       '**/*.config.js',
+      'apps/api/scripts/*.js', // plain CommonJS runners over the compiled app
       '**/.expo/**',
       '**/storybook-static/**',
     ],

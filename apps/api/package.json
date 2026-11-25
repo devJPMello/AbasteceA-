@@ -10,7 +10,7 @@
     "test": "pnpm --filter @bomba-certa/shared build && jest",
     "test:e2e": "pnpm --filter @bomba-certa/shared build && jest --config test/jest-e2e.config.js --runInBand",
     "seed": "tsx prisma/seed.ts",
-    "anp:import": "tsx scripts/anp-import.ts",
+    "anp:import": "nest build && node scripts/anp-import.js",
     "osm:fetch": "tsx scripts/fetch-osm-stations.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

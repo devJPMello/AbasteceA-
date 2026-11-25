@@ -241,6 +241,22 @@ Gratuito: **Render** (API + Redis) + **Neon** (PostgreSQL com PostGIS) + **Cloud
   (e preenche só os campos "não informado"); vários candidatos equivalentes = ambíguo, ignorado; nenhum = posto novo (`source = ANP`).
   O resumo da execução informa `stationsMatched` e `stationsAmbiguous`.
 
+## Atualizando os dados
+
+```powershell
+# 1. Postos do OpenStreetMap: baixa de novo e RECARREGA o banco de desenvolvimento (apaga postos e preços!)
+pnpm --filter @bomba-certa/api osm:fetch
+pnpm --filter @bomba-certa/api seed
+
+# 2. Preços da ANP: baixe o CSV mensal em gov.br/anp (dados abertos > série histórica > dsan/<ano>)
+#    e importe. Pode repetir à vontade: é idempotente. Rode depois do seed.
+pnpm --filter @bomba-certa/api anp:import -- --file=C:caminho-gasolina-etanol.csv
+pnpm --filter @bomba-certa/api anp:import -- --file=C:caminho-diesel-gnv.csv
+```
+
+Em produção o job semanal usa `ANP_DATASET_URL`, mas a ANP publica **um arquivo novo por mês, por produto, com nome diferente**:
+o link precisa ser atualizado a cada mês (limitação conhecida).
+
 ## Limitações conhecidas e próximos passos
 
 - **ANP**: testei com os arquivos reais de outubro/2026 (`dsan/2026/10-gasolina-etanol.csv` e `10-diesel-gnv.csv`): têm o formato esperado e
