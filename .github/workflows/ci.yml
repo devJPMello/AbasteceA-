@@ -43,6 +43,9 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm --filter @bomba-certa/api test
+      - run: pnpm --filter @bomba-certa/shared test
+      - run: pnpm --filter @bomba-certa/mobile test
       - run: pnpm --filter @bomba-certa/web test
       - run: pnpm --filter @bomba-certa/web build
+      - run: pnpm --filter @bomba-certa/mobile export
       - run: pnpm --filter @bomba-certa/api test:e2e
