@@ -92,6 +92,10 @@ e o GitHub desativa workflows agendados após 60 dias sem atividade no repositó
 
 3. Variáveis de ambiente: `NODE_VERSION=22` e `VITE_API_URL=https://SEU-SERVICO.onrender.com`.
 4. O fallback de SPA (`/stations/:id` abrindo direto) vem de [apps/web/public/\_redirects](apps/web/public/_redirects).
+   O [\_headers](apps/web/public/_headers) garante que `sw.js`, `index.html` e o manifesto **nunca** fiquem em cache do navegador
+   (senão usuários podem ficar presos numa versão antiga) e que `/assets/*` seja imutável. Como o app é um PWA, confira depois do
+   deploy: DevTools → Application → Manifest/Service Workers, e um relatório PWA do Lighthouse. A API precisa liberar o domínio do
+   Pages em `CORS_ORIGIN`, ou o Service Worker não consegue ler (nem cachear) as respostas.
 5. Com a URL final (`https://….pages.dev`), volte ao Render e defina `CORS_ORIGIN` com ela. Redeploy.
 
 O web importa os schemas Zod de `packages/shared` direto do código-fonte (alias do Vite): não há build extra.

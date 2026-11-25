@@ -26,6 +26,7 @@ garante dados mesmo sem usuários, e alertas de preço avisam quando algum posto
 - **Mapa** com pinos por faixa de preço (barato, médio, caro) que usam **forma além da cor** (▼ ◆ ▲), _clustering_ que mostra a quantidade e o preço mais barato do grupo, e destaque para preço desatualizado
 - **Página do posto** com histórico de preços (Recharts)
 - **Tema claro e escuro**, _bottom sheet_ no celular, estados de carregamento (skeleton), erro (com "tentar novamente") e vazio, e toasts
+- **PWA instalável e com modo offline**: botão "Instalar", aviso de nova versão (o usuário escolhe quando atualizar) e faixa "você está offline". Sem rede, o app abre e mostra os últimos postos, preços, gráficos e tiles do mapa vistos
 - **Importação semanal da ANP** por job agendado no BullMQ, filtrada por Palmas
 - **Alertas de preço** processados em fila, com notificação in-app, e-mail e push (Expo). No web: página **Alertas** (criar, listar, excluir com "desfazer"), caixa de notificações e um **sino** no cabeçalho com contagem de não lidas e toast quando um alerta dispara
 - **Confirmação de reportes** com o botão só para quem pode usá-lo: a API informa `isMine` e `confirmedByMe` (autenticação opcional; o id do autor nunca é exposto)
@@ -126,7 +127,7 @@ pnpm typecheck
 pnpm --filter @bomba-certa/shared test      # 9
 pnpm --filter @bomba-certa/api test         # 34 unitários
 pnpm --filter @bomba-certa/api test:e2e     # 24, contra PostgreSQL/PostGIS e Redis reais
-pnpm --filter @bomba-certa/web test         # 41
+pnpm --filter @bomba-certa/web test         # 72
 pnpm --filter @bomba-certa/mobile test      # 5
 ```
 
@@ -184,6 +185,15 @@ O GitHub Actions ([ci.yml](.github/workflows/ci.yml)) roda lint, formatação, t
   efeitos mantém seguro o duplo _mount_ do StrictMode. Os ícones são HTML gerado por funções puras e testadas (`lib/mapIcons.ts`).
   O tema escuro do mapa inverte os tiles por CSS, sem um segundo provedor.
 - **`AsyncStateView`**: um só lugar para os quatro estados de dado remoto (carregando, erro com retry, vazio, sucesso).
+- **PWA (`vite-plugin-pwa`, Workbox)**: o _shell_ é pré-cacheado e `registerType: 'prompt'` evita trocar a versão no meio de um reporte.
+  Em runtime, **tiles** usam `CacheFirst` (limitado a 400, 7 dias, para ser um cliente educado do OSM) e as leituras **públicas** de postos
+  usam `NetworkFirst` com _timeout_ de 4 s, o que também mostra o último dado enquanto uma API gratuita "acorda".
+  O que pode ser cacheado é decidido por um arquivo só (`src/pwa/cache-rules.ts`), com testes que garantem que `pending-reports`,
+  alertas, notificações e auth **nunca** entram no cache (evita mostrar dados de um usuário a outro num aparelho compartilhado).
+- **React Query offline**: `networkMode: 'offlineFirst'` nas consultas (sem isso ele pausa offline e deixa o skeleton para sempre, mesmo
+  havendo cache) e `'always'` nas mutações (falham rápido com "sem conexão" em vez de ficarem penduradas).
+- O Service Worker só é gerado em produção (`devOptions.enabled: false`): cache em desenvolvimento só atrapalha. Os ícones PNG saem
+  de `public/icon.svg` por `pnpm --filter @bomba-certa/web generate-pwa-assets` e são versionados, então o build não precisa do `sharp`.
 - _Bottom sheet_ com altura **medida** (`ResizeObserver`), para a bandeja recolhida caber exatamente no conteúdo.
 
 **Qualidade**
