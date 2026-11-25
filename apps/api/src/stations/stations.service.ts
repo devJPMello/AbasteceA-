@@ -143,19 +143,31 @@ export class StationsService {
     return { fuelType: q.fuelType, days: q.days, points };
   }
 
-  /** Reports waiting for confirmation, so other users can vote on them. */
-  async pendingReports(id: string) {
-    return this.prisma.priceReport.findMany({
+  /**
+   * Reports waiting for confirmation, so other users can vote on them.
+   * For a logged-in caller each report carries `isMine` / `confirmedByMe`; the author id itself is
+   * never exposed.
+   */
+  async pendingReports(id: string, userId?: string) {
+    const reports = await this.prisma.priceReport.findMany({
       where: { stationId: id, status: 'PENDING' },
       orderBy: { reportedAt: 'desc' },
       take: 20,
       select: {
         id: true,
+        userId: true,
         fuelType: true,
         priceMilli: true,
         confirmationsCount: true,
         reportedAt: true,
+        // Only this caller's own vote (at most one row, by the composite primary key).
+        confirmations: userId ? { where: { userId }, select: { userId: true } } : false,
       },
     });
+    return reports.map(({ userId: author, confirmations, ...report }) => ({
+      ...report,
+      isMine: userId !== undefined && author === userId,
+      confirmedByMe: Array.isArray(confirmations) && confirmations.length > 0,
+    }));
   }
 }

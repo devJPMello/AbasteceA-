@@ -46,6 +46,10 @@ export interface PendingReport {
   priceMilli: number;
   confirmationsCount: number;
   reportedAt: string;
+  /** True when the logged-in caller authored it (cannot confirm own reports). */
+  isMine: boolean;
+  /** True when the logged-in caller already confirmed it (one vote per user). */
+  confirmedByMe: boolean;
 }
 
 export interface AuthResponse {

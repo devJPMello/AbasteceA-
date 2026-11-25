@@ -188,11 +188,41 @@ describe('Bomba Certa API (e2e, real PostGIS)', () => {
 
       const c1 = await register();
       const c2 = await register();
+
+      // The pending list tells each caller whether the Confirm button makes sense for them.
+      const pendingFor = async (token?: string) => {
+        const req = http.get(`/stations/${station}/pending-reports`);
+        const res = await (token ? req.set(auth(token)) : req).expect(200);
+        return res.body[0] as { id: string; isMine: boolean; confirmedByMe: boolean };
+      };
+      expect(await pendingFor(author.accessToken)).toMatchObject({
+        id: reportId,
+        isMine: true,
+        confirmedByMe: false,
+      });
+      expect(await pendingFor(c1.accessToken)).toMatchObject({
+        isMine: false,
+        confirmedByMe: false,
+      });
+      expect(await pendingFor()).toMatchObject({ isMine: false, confirmedByMe: false }); // anonymous
+      // An invalid token is treated as anonymous, not rejected (the endpoint is public).
+      const bad = await http
+        .get(`/stations/${station}/pending-reports`)
+        .set(auth('not-a-token'))
+        .expect(200);
+      expect(bad.body[0]).toMatchObject({ isMine: false });
+      expect(bad.body[0]).not.toHaveProperty('userId'); // the author id is never exposed
+
       const first = await http
         .post(`/prices/reports/${reportId}/confirm`)
         .set(auth(c1.accessToken))
         .expect(200);
       expect(first.body.status).toBe('PENDING');
+      expect(await pendingFor(c1.accessToken)).toMatchObject({
+        isMine: false,
+        confirmedByMe: true,
+      });
+      expect(await pendingFor(c2.accessToken)).toMatchObject({ confirmedByMe: false });
       await http.post(`/prices/reports/${reportId}/confirm`).set(auth(c1.accessToken)).expect(409);
 
       const second = await http

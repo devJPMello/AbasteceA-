@@ -15,7 +15,7 @@ import {
   priceHistoryQuerySchema,
 } from '@bomba-certa/shared';
 import { createZodDto } from 'nestjs-zod';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuthUser, JwtAuthGuard, MaybeUser, OptionalJwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StationsService } from './stations.service';
 
 class CreateStationDto extends createZodDto(createStationSchema) {}
@@ -58,8 +58,15 @@ export class StationsController {
   }
 
   @Get(':id/pending-reports')
-  @ApiOperation({ summary: 'Reports awaiting confirmation at this station' })
-  pending(@Param('id', ParseUUIDPipe) id: string) {
-    return this.stations.pendingReports(id);
+  @ApiBearerAuth()
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'Reports awaiting confirmation at this station',
+    description:
+      'Public. With a valid token, each report also says whether it is yours (`isMine`) or you ' +
+      'already confirmed it (`confirmedByMe`), so clients can hide the Confirm button.',
+  })
+  pending(@Param('id', ParseUUIDPipe) id: string, @MaybeUser() user?: AuthUser) {
+    return this.stations.pendingReports(id, user?.id);
   }
 }
