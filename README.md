@@ -26,6 +26,8 @@ garante dados mesmo sem usuários, e alertas de preço avisam quando algum posto
 - **Mapa** com pinos por faixa de preço (barato, médio, caro) que usam **forma além da cor** (▼ ◆ ▲), _clustering_ que mostra a quantidade e o preço mais barato do grupo, e destaque para preço desatualizado
 - **Página do posto** com histórico de preços (Recharts)
 - **Tema claro e escuro**, _bottom sheet_ no celular, estados de carregamento (skeleton), erro (com "tentar novamente") e vazio, e toasts
+- **Acessibilidade verificada em três camadas** (veja "Front-end"): contraste WCAG medido nos tokens, `axe-core` nas telas e axe em navegador real
+- **Storybook** com os átomos, moléculas e organismos nos dois temas e o painel de acessibilidade
 - **PWA instalável e com modo offline**: botão "Instalar", aviso de nova versão (o usuário escolhe quando atualizar) e faixa "você está offline". Sem rede, o app abre e mostra os últimos postos, preços, gráficos e tiles do mapa vistos
 - **Importação semanal da ANP** por job agendado no BullMQ, filtrada por Palmas
 - **Alertas de preço** processados em fila, com notificação in-app, e-mail e push (Expo). No web: página **Alertas** (criar, listar, excluir com "desfazer"), caixa de notificações e um **sino** no cabeçalho com contagem de não lidas e toast quando um alerta dispara
@@ -127,12 +129,13 @@ pnpm typecheck
 pnpm --filter @bomba-certa/shared test      # 9
 pnpm --filter @bomba-certa/api test         # 34 unitários
 pnpm --filter @bomba-certa/api test:e2e     # 24, contra PostgreSQL/PostGIS e Redis reais
-pnpm --filter @bomba-certa/web test         # 72
+pnpm --filter @bomba-certa/web test         # 161 (inclui contraste dos tokens e axe)
+pnpm --filter @bomba-certa/web storybook    # catálogo de componentes em http://localhost:6006
 pnpm --filter @bomba-certa/mobile test      # 5
 ```
 
 O GitHub Actions ([ci.yml](.github/workflows/ci.yml)) roda lint, formatação, typecheck, todos os testes (com serviços
-`postgis/postgis` e Redis), o build do web, o bundle do mobile e o build da imagem Docker.
+`postgis/postgis` e Redis), o build do web e do Storybook, o bundle do mobile e o build da imagem Docker.
 
 ## Decisões técnicas
 
@@ -195,6 +198,23 @@ O GitHub Actions ([ci.yml](.github/workflows/ci.yml)) roda lint, formatação, t
 - O Service Worker só é gerado em produção (`devOptions.enabled: false`): cache em desenvolvimento só atrapalha. Os ícones PNG saem
   de `public/icon.svg` por `pnpm --filter @bomba-certa/web generate-pwa-assets` e são versionados, então o build não precisa do `sharp`.
 - _Bottom sheet_ com altura **medida** (`ResizeObserver`), para a bandeja recolhida caber exatamente no conteúdo.
+
+**Acessibilidade e documentação viva (Storybook)**
+
+Três camadas, porque cada uma enxerga o que as outras não enxergam:
+
+1. **Contraste dos tokens** (`src/lib/contrast.test.ts`): lê o `index.css` e aplica a fórmula WCAG a cada par de cores, nos dois temas
+   (texto 4,5:1; borda de campo e foco 3:1). Ele pegou falhas reais na primeira execução: badges verdes/âmbar no tema claro
+   (3,9 a 4,1:1) e a borda dos campos (1,5:1), já corrigidas escurecendo as cores e reforçando a borda.
+2. **`axe-core` nas telas** (`src/test/a11y.test.tsx`): login, cadastro, alertas, posto, mapa (celular e desktop), cabeçalho, lista e _bottom
+   sheet_, nos estados com dados, vazio, carregando e erro. Um teste garante que o helper **detecta** violações (para a suíte não passar
+   vazia). O jsdom não calcula cores nem avalia regras de página inteira, por isso a camada seguinte existe.
+3. **axe em navegador real**, com contraste de verdade, nas telas rodando (claro e escuro). Achou o que o jsdom não vê: faltava `<h1>` no
+   mapa e na tela de alertas para visitante. Para repetir, injete `axe.min.js` pelo servidor de dev (`/@fs/…/axe-core/axe.min.js`) e rode `axe.run(document)`.
+
+O **Storybook** (`pnpm --filter @bomba-certa/web storybook`) reaproveita o `index.css`, tem alternância claro/escuro na barra e o painel
+de acessibilidade (o PWA fica de fora). Os dados de exemplo (`src/test/fixtures.ts`) são os mesmos dos testes. Telas que dependem
+da API (alertas, notificações) são cobertas por testes, não por stories.
 
 **Qualidade**
 
