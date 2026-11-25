@@ -47,6 +47,7 @@ jobs:
       - run: pnpm --filter @bomba-certa/mobile test
       - run: pnpm --filter @bomba-certa/web test
       - run: pnpm --filter @bomba-certa/web build
+      - run: pnpm --filter @bomba-certa/web build-storybook
       - run: pnpm --filter @bomba-certa/mobile export
       - run: pnpm --filter @bomba-certa/api test:e2e
 
