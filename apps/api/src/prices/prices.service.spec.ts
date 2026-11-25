@@ -20,8 +20,13 @@ function build(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
   const config = { get: jest.fn().mockReturnValue(15) } as unknown as ConfigService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { service: new PricesService(prisma as any, config as any), prisma, tx };
+  const events = { stationPriceChanged: jest.fn().mockResolvedValue(undefined) };
+  return {
+    service: new PricesService(prisma as never, config as never, events as never),
+    prisma,
+    tx,
+    events,
+  };
 }
 
 describe('PricesService.createReport', () => {
@@ -49,6 +54,48 @@ describe('PricesService.createReport', () => {
       }),
     );
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+  });
+
+  const activeReport = { id: REPORT, stationId: STATION, fuelType: 'ETHANOL', status: 'ACTIVE' };
+
+  it('publishes a price-changed event for ACTIVE reports', async () => {
+    const { service, tx, events } = build();
+    tx.priceReport.create.mockResolvedValue(activeReport);
+    await service.createReport(USER, input);
+    expect(events.stationPriceChanged).toHaveBeenCalledWith(STATION, 'ETHANOL');
+  });
+
+  it('does not publish for PENDING reports', async () => {
+    const { service, tx, events } = build();
+    tx.priceReport.create.mockResolvedValue({ ...activeReport, status: 'PENDING' });
+    await service.createReport(USER, { ...input, priceMilli: 8000 });
+    expect(events.stationPriceChanged).not.toHaveBeenCalled();
+  });
+
+  it('still saves the price when the queue is down', async () => {
+    const { service, tx, events } = build();
+    events.stationPriceChanged.mockRejectedValue(new Error('redis down'));
+    tx.priceReport.create.mockResolvedValue(activeReport);
+    await expect(service.createReport(USER, input)).resolves.toMatchObject({ status: 'ACTIVE' });
+  });
+
+  it('uses ANP prices as the reference when there are enough samples', async () => {
+    const { service, tx, prisma } = build();
+    prisma.$queryRaw.mockResolvedValueOnce([{ median: 6000, samples: 4n }]); // ANP median
+    tx.priceReport.create.mockResolvedValue({ ...activeReport, status: 'PENDING' });
+    await service.createReport(USER, { ...input, priceMilli: 8000 });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1); // no fallback query needed
+    expect(tx.$executeRaw).not.toHaveBeenCalled(); // PENDING: current price untouched
+  });
+
+  it('falls back to all fresh prices when ANP has too few samples', async () => {
+    const { service, tx, prisma } = build();
+    prisma.$queryRaw
+      .mockResolvedValueOnce([{ median: 6000, samples: 1n }]) // ANP: not enough
+      .mockResolvedValueOnce([{ median: 6000, samples: 5n }]); // all sources
+    tx.priceReport.create.mockResolvedValue({ ...activeReport, status: 'PENDING' });
+    await service.createReport(USER, { ...input, priceMilli: 8000 });
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
   });
 
   it('stores out-of-range prices as PENDING and leaves the current price alone', async () => {

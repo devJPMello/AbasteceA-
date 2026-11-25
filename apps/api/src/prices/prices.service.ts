@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,19 +16,38 @@ import {
   type CreatePriceReportInput,
   type FuelType,
 } from '@bomba-certa/shared';
-import { Prisma, type PriceReport } from '@prisma/client';
+import type { PriceReport } from '@prisma/client';
+import { PriceEventsPublisher } from '../alerts/price-events.publisher';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { applyCurrentPrice } from './current-price';
 import { MIN_SAMPLES_FOR_REFERENCE, isPlausible } from './plausibility';
 
-type Tx = Prisma.TransactionClient;
+/** ANP is a field survey, so it can be up to ~2 weeks old and still be a good reference. */
+const ANP_REFERENCE_DAYS = 21;
 
 @Injectable()
 export class PricesService {
+  private readonly logger = new Logger(PricesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
+    private readonly events: PriceEventsPublisher,
   ) {}
+
+  /**
+   * Called after the DB transaction commits. Best effort: if Redis is down the price is still
+   * saved (the source of truth); alerts for it are simply late. A transactional outbox would
+   * make this exactly-once, at the cost of more moving parts.
+   */
+  private async publishPriceChange(report: PriceReport) {
+    try {
+      await this.events.stationPriceChanged(report.stationId, report.fuelType);
+    } catch (err) {
+      this.logger.error(`Could not enqueue alert check: ${String(err)}`);
+    }
+  }
 
   async createReport(userId: string, input: CreatePriceReportInput) {
     const station = await this.prisma.station.findUnique({
@@ -42,7 +62,7 @@ export class PricesService {
     const pct = this.config.get('PRICE_PLAUSIBILITY_PCT', { infer: true });
     const status = isPlausible(input.priceMilli, reference, pct) ? 'ACTIVE' : 'PENDING';
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       const report = await tx.priceReport.create({
         data: {
           stationId: input.stationId,
@@ -53,9 +73,11 @@ export class PricesService {
           status,
         },
       });
-      if (status === 'ACTIVE') await this.applyCurrentPrice(tx, report);
+      if (status === 'ACTIVE') await applyCurrentPrice(tx, report);
       return report;
     });
+    if (created.status === 'ACTIVE') await this.publishPriceChange(created);
+    return created;
   }
 
   async confirmReport(userId: string, reportId: string) {
@@ -66,7 +88,7 @@ export class PricesService {
       throw new ForbiddenException('You cannot confirm your own report');
     if (report.status === 'REJECTED') throw new ConflictException('Report was rejected');
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Composite PK (report, user) makes a second vote fail with P2002 -> 409.
       await tx.reportConfirmation.create({ data: { reportId, userId } });
       const updated = await tx.priceReport.update({
@@ -78,11 +100,13 @@ export class PricesService {
           where: { id: reportId },
           data: { status: 'ACTIVE' },
         });
-        await this.applyCurrentPrice(tx, activated);
-        return activated;
+        await applyCurrentPrice(tx, activated);
+        return { report: activated, activated: true };
       }
-      return updated;
+      return { report: updated, activated: false };
     });
+    if (result.activated) await this.publishPriceChange(result.report);
+    return result.report;
   }
 
   /** One report per user + station + fuel every REPORT_COOLDOWN_HOURS. */
@@ -109,37 +133,32 @@ export class PricesService {
   }
 
   /**
-   * Median of the fresh current prices for a fuel across the city.
-   * Median (not mean) so a single absurd value cannot drag the reference.
-   * percentile_cont(0.5) is the SQL median; returns null with too few samples.
+   * Reference price for plausibility: the city median for a fuel.
+   *
+   * ANP survey prices come first: they are independent of app users, so a coordinated group
+   * of fake reports cannot drag the reference. Only if ANP has too few samples do we fall back
+   * to the median of all fresh prices. Median (not mean) so one absurd value cannot skew it;
+   * percentile_cont(0.5) is the SQL median. Returns null when there is not enough data.
    */
   private async cityMedian(fuelType: FuelType): Promise<number | null> {
+    const anp = await this.medianOf(fuelType, 'ANP', ANP_REFERENCE_DAYS);
+    if (anp !== null) return anp;
+    return this.medianOf(fuelType, null, PRICE_FRESHNESS_DAYS);
+  }
+
+  private async medianOf(
+    fuelType: FuelType,
+    source: 'ANP' | null,
+    days: number,
+  ): Promise<number | null> {
     const [row] = await this.prisma.$queryRaw<{ median: number | null; samples: bigint }[]>`
       SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY price_milli)::float8 AS median,
              count(*) AS samples
       FROM station_current_prices
       WHERE fuel_type = ${fuelType}::fuel_type
-        AND reported_at > now() - make_interval(days => ${PRICE_FRESHNESS_DAYS}::int)`;
+        AND (${source}::text IS NULL OR source = ${source}::price_source)
+        AND reported_at > now() - make_interval(days => ${days}::int)`;
     if (!row || Number(row.samples) < MIN_SAMPLES_FOR_REFERENCE) return null;
     return row.median;
-  }
-
-  /**
-   * Upsert into the denormalized current-price table, but only if this report is newer
-   * than what is stored. Doing it in a single ON CONFLICT ... WHERE statement keeps it atomic,
-   * so a late-activated old report can never overwrite a newer price.
-   */
-  private async applyCurrentPrice(tx: Tx, report: PriceReport) {
-    await tx.$executeRaw`
-      INSERT INTO station_current_prices
-        (station_id, fuel_type, price_milli, source, report_id, reported_at)
-      VALUES (${report.stationId}::uuid, ${report.fuelType}::fuel_type, ${report.priceMilli},
-              ${report.source}::price_source, ${report.id}::uuid, ${report.reportedAt})
-      ON CONFLICT (station_id, fuel_type) DO UPDATE
-        SET price_milli = EXCLUDED.price_milli,
-            source      = EXCLUDED.source,
-            report_id   = EXCLUDED.report_id,
-            reported_at = EXCLUDED.reported_at
-        WHERE station_current_prices.reported_at <= EXCLUDED.reported_at`;
   }
 }
