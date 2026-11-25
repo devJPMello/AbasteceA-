@@ -76,8 +76,8 @@ export default function AlertsScreen() {
       <Text style={styles.section}>Novo alerta</Text>
       <Card>
         <Text style={styles.meta}>
-          Avisa quando um posto a até {radiusMeters / 1000} km de{' '}
-          {status === 'granted' ? 'você' : 'o centro de Palmas'} chegar ao preço-alvo ou menos.
+          Avisa quando um posto a até {radiusMeters / 1000} km{' '}
+          {status === 'granted' ? 'de você' : 'do centro de Palmas'} chegar ao preço-alvo ou menos.
         </Text>
         <ScrollView
           horizontal
