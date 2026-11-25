@@ -1,0 +1,9 @@
+{
+  "name": "@bomba-certa/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "echo \"web: Vite arrives in phase 3\"",
+    "test": "echo \"no tests yet\""
+  }
+}

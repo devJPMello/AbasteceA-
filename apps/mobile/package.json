@@ -1,0 +1,9 @@
+{
+  "name": "@bomba-certa/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "echo \"mobile: Expo arrives in phase 5\"",
+    "test": "echo \"no tests yet\""
+  }
+}
