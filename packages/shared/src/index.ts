@@ -37,3 +37,45 @@ export type CreatePriceReportInput = z.infer<typeof createPriceReportSchema>;
 /** Business constants shared by API and clients. */
 export const PRICE_FRESHNESS_DAYS = 7;
 export const REPORT_COOLDOWN_HOURS = 6;
+
+/** A report out of the plausible range needs this many distinct confirmations to go live. */
+export const CONFIRMATIONS_REQUIRED = 2;
+
+export const refreshSchema = z.object({ refreshToken: z.string().min(20) });
+export type RefreshInput = z.infer<typeof refreshSchema>;
+
+export const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export const SortBy = z.enum(['price', 'distance']);
+export type SortBy = z.infer<typeof SortBy>;
+
+export const nearbyQuerySchema = coordinates
+  .extend({
+    lat: z.coerce.number().min(-90).max(90),
+    lng: z.coerce.number().min(-180).max(180),
+    radiusMeters: z.coerce.number().int().min(100).max(50000).default(5000),
+    fuelType: FuelType,
+    sortBy: SortBy.default('price'),
+  })
+  .merge(paginationSchema);
+export type NearbyQuery = z.infer<typeof nearbyQuerySchema>;
+
+export const createStationSchema = coordinates.extend({
+  name: z.string().trim().min(2).max(120),
+  brand: z.string().trim().min(2).max(60),
+  cnpj: z
+    .string()
+    .regex(/^\d{14}$/, 'CNPJ must have 14 digits')
+    .optional(),
+  address: z.string().trim().min(5).max(200),
+});
+export type CreateStationInput = z.infer<typeof createStationSchema>;
+
+export const priceHistoryQuerySchema = z.object({
+  fuelType: FuelType,
+  days: z.coerce.number().int().min(1).max(365).default(30),
+});
+export type PriceHistoryQuery = z.infer<typeof priceHistoryQuerySchema>;
