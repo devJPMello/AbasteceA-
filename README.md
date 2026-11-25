@@ -27,7 +27,8 @@ garante dados mesmo sem usuários, e alertas de preço avisam quando algum posto
 - **Página do posto** com histórico de preços (Recharts)
 - **Tema claro e escuro**, _bottom sheet_ no celular, estados de carregamento (skeleton), erro (com "tentar novamente") e vazio, e toasts
 - **Importação semanal da ANP** por job agendado no BullMQ, filtrada por Palmas
-- **Alertas de preço** processados em fila, com notificação in-app, e-mail e push (Expo)
+- **Alertas de preço** processados em fila, com notificação in-app, e-mail e push (Expo). No web: página **Alertas** (criar, listar, excluir com "desfazer"), caixa de notificações e um **sino** no cabeçalho com contagem de não lidas e toast quando um alerta dispara
+- **Confirmação de reportes** com o botão só para quem pode usá-lo: a API informa `isMine` e `confirmedByMe` (autenticação opcional; o id do autor nunca é exposto)
 - **Mobile (Expo)** com mapa, reporte rápido, alertas e push notifications
 
 ### Regras de negócio
@@ -125,7 +126,7 @@ pnpm typecheck
 pnpm --filter @bomba-certa/shared test      # 9
 pnpm --filter @bomba-certa/api test         # 34 unitários
 pnpm --filter @bomba-certa/api test:e2e     # 24, contra PostgreSQL/PostGIS e Redis reais
-pnpm --filter @bomba-certa/web test         # 25
+pnpm --filter @bomba-certa/web test         # 41
 pnpm --filter @bomba-certa/mobile test      # 5
 ```
 
@@ -206,7 +207,6 @@ Gratuito: **Render** (API + Redis) + **Neon** (PostgreSQL com PostGIS) + **Cloud
   Postos cadastrados por usuários sem CNPJ não casam com a ANP.
 - **Mobile**: validado por typecheck, testes e _bundle_ do Metro, **não** em aparelho. Push exige projeto EAS e _development build_.
 - Eventos de preço são publicados após o _commit_ (_best effort_): se o Redis cair, o preço é salvo mas o alerta atrasa. Um _outbox_ transacional resolveria.
-- O botão "Confirmar" aparece também para o autor do reporte (a API responde 403 com mensagem); o ideal é escondê-lo.
-- Faltam no web telas para alertas e notificações (a API e o mobile já os usam).
+- O mobile ainda não tem a lista de reportes pendentes (só o web), e o sino do web atualiza por _polling_ de 1 min (mais um _refetch_ logo após criar um alerta), não em tempo real: um WebSocket/SSE seria a evolução.
 - Sem administração/moderação além das confirmações entre usuários.
 - No plano gratuito do Render a API hiberna (ver [DEPLOY.md](DEPLOY.md#limitações-do-plano-gratuito)).
