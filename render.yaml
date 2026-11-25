@@ -9,7 +9,6 @@ services:
   - type: web
     name: bomba-certa-web
     runtime: static
-    plan: free
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @bomba-certa/web build
     staticPublishPath: apps/web/dist
     envVars:
