@@ -31,6 +31,15 @@ services:
       timeout: 3s
       retries: 10
 
+  # Local SMTP sink for alert e-mails: UI at http://localhost:8026
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: bomba-certa-mailpit
+    restart: unless-stopped
+    ports:
+      - '${MAILPIT_SMTP_PORT:-1026}:1025'
+      - '${MAILPIT_UI_PORT:-8026}:8025'
+
 volumes:
   pgdata:
   redisdata:
