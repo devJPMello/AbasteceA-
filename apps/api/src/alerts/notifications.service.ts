@@ -4,6 +4,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import type { Env } from '../config/env';
 import { paginate } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExpoPushChannel } from './expo-push.channel';
 
 export interface Recipient {
   id: string;
@@ -62,8 +63,9 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly inApp: InAppChannel,
     email: EmailChannel,
+    push: ExpoPushChannel,
   ) {
-    this.secondary = [email];
+    this.secondary = [email, push];
   }
 
   /**

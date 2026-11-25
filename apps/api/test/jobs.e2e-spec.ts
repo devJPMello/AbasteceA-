@@ -196,6 +196,90 @@ describe('Background jobs (e2e, real Postgres + Redis)', () => {
     });
   });
 
+  describe('push notifications (Expo)', () => {
+    it('registers a device, pushes when an alert fires and unregisters', async () => {
+      const user = await register();
+      const token = 'ExponentPushToken[e2e-device]';
+
+      await http
+        .post('/devices')
+        .set(auth(user.accessToken))
+        .send({ token, platform: 'android' })
+        .expect(204);
+      // Idempotent: registering the same token again is fine.
+      await http
+        .post('/devices')
+        .set(auth(user.accessToken))
+        .send({ token, platform: 'android' })
+        .expect(204);
+      await http
+        .post('/devices')
+        .set(auth(user.accessToken))
+        .send({ token: 'bad', platform: 'android' })
+        .expect(400);
+      await http.post('/devices').send({ token, platform: 'android' }).expect(401);
+      expect(await prisma.deviceToken.count({ where: { token } })).toBe(1);
+
+      const station = await http
+        .post('/stations')
+        .set(auth(user.accessToken))
+        .send({ name: 'Posto Push', brand: 'Shell', address: 'Quadra 906 Sul', ...at(700) })
+        .expect(201);
+      await http
+        .post('/alerts')
+        .set(auth(user.accessToken))
+        .send({ fuelType: 'DIESEL_S10', targetPriceMilli: 6000, radiusMeters: 2000, ...CENTER })
+        .expect(201);
+
+      // Intercept only the call to Expo: no real network in tests.
+      const fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(
+          new Response(JSON.stringify({ data: [{ status: 'ok' }] }), { status: 200 }),
+        );
+      try {
+        const reporter = await register();
+        await http
+          .post('/prices/reports')
+          .set(auth(reporter.accessToken))
+          .send({ stationId: station.body.id, fuelType: 'DIESEL_S10', priceMilli: 5900 })
+          .expect(201);
+
+        await waitFor(async () => fetchSpy.mock.calls.length > 0);
+        const [, init] = fetchSpy.mock.calls[0]!;
+        const sent = JSON.parse((init as RequestInit).body as string);
+        expect(sent).toHaveLength(1);
+        expect(sent[0]).toMatchObject({ to: token, title: expect.stringContaining('Diesel S10') });
+        // The in-app record is created too: push is an extra channel, not a replacement.
+        expect((await notifications(user.accessToken)).meta.total).toBe(1);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+
+      await http
+        .delete(`/devices/${encodeURIComponent(token)}`)
+        .set(auth(user.accessToken))
+        .expect(204);
+      expect(await prisma.deviceToken.count({ where: { token } })).toBe(0);
+    });
+
+    it("does not let one user unregister another user's device", async () => {
+      const owner = await register();
+      const intruder = await register();
+      const token = 'ExponentPushToken[owner-device]';
+      await http
+        .post('/devices')
+        .set(auth(owner.accessToken))
+        .send({ token, platform: 'ios' })
+        .expect(204);
+      await http
+        .delete(`/devices/${encodeURIComponent(token)}`)
+        .set(auth(intruder.accessToken))
+        .expect(204);
+      expect(await prisma.deviceToken.count({ where: { token } })).toBe(1);
+    });
+  });
+
   describe('ANP import', () => {
     const csv = readFileSync(join(__dirname, 'fixtures/anp-sample.csv'), 'utf8');
     let importer: AnpImportService;

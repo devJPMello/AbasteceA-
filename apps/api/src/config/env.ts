@@ -31,6 +31,9 @@ const envSchema = z.object({
 
   // --- Notifications ---
   SMTP_URL: z.string().optional(),
+  EXPO_PUSH_URL: z.string().url().default('https://exp.host/--/api/v2/push/send'),
+  /** Optional: only needed if enhanced push security is enabled on the Expo project. */
+  EXPO_ACCESS_TOKEN: z.string().optional(),
   MAIL_FROM: z.string().default('Bomba Certa <no-reply@bombacerta.local>'),
 });
 
