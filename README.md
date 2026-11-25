@@ -6,9 +6,13 @@ garante dados mesmo sem usuários, e alertas de preço avisam quando algum posto
 
 > Projeto de portfólio full stack, do banco ao deploy. Nome provisório.
 
-|                                             Mapa (web)                                             |                                  Posto, histórico e reporte                                   |                       Mobile (viewport)                       |
-| :------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------: | :-----------------------------------------------------------: |
-| ![Mapa com marcadores coloridos por faixa de preço e lista ordenada](docs/screenshots/web-map.jpg) | ![Página do posto com preços atuais e gráfico do histórico](docs/screenshots/web-station.jpg) | ![Versão responsiva do mapa](docs/screenshots/web-mobile.jpg) |
+|                                      Mapa (tema claro)                                       |                       Mapa (tema escuro)                        |
+| :------------------------------------------------------------------------------------------: | :-------------------------------------------------------------: |
+| ![Mapa com pinos por faixa de preço, legenda e lista ordenada](docs/screenshots/web-map.jpg) | ![Mesmo mapa no tema escuro](docs/screenshots/web-map-dark.jpg) |
+
+|                                  Posto, histórico e reporte                                   |                                 Celular: bottom sheet                                  |
+| :-------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |
+| ![Página do posto com preços atuais e gráfico do histórico](docs/screenshots/web-station.jpg) | ![Mapa no celular com o posto selecionado na bandeja](docs/screenshots/web-mobile.jpg) |
 
 > Os preços e a maioria dos postos das imagens são **fictícios** (seed de desenvolvimento).
 > O app Expo ainda não foi executado em aparelho neste repositório: o print mobile acima é o web em viewport de celular.
@@ -19,8 +23,9 @@ garante dados mesmo sem usuários, e alertas de preço avisam quando algum posto
 - **Postos** com localização (`geography(Point, 4326)`), bandeira e endereço
 - **Reporte de preço** por combustível (gasolina comum, aditivada, etanol, diesel S10)
 - **Busca por raio** com `ST_DWithin`, ordenada por preço ou distância, paginada
-- **Mapa** com marcadores coloridos por faixa de preço (barato, médio, caro) e destaque para preço desatualizado
+- **Mapa** com pinos por faixa de preço (barato, médio, caro) que usam **forma além da cor** (▼ ◆ ▲), _clustering_ que mostra a quantidade e o preço mais barato do grupo, e destaque para preço desatualizado
 - **Página do posto** com histórico de preços (Recharts)
+- **Tema claro e escuro**, _bottom sheet_ no celular, estados de carregamento (skeleton), erro (com "tentar novamente") e vazio, e toasts
 - **Importação semanal da ANP** por job agendado no BullMQ, filtrada por Palmas
 - **Alertas de preço** processados em fila, com notificação in-app, e-mail e push (Expo)
 - **Mobile (Expo)** com mapa, reporte rápido, alertas e push notifications
@@ -81,7 +86,7 @@ Monorepo **pnpm workspaces**:
 ```
 apps/
   api/        NestJS 11 · Prisma · PostgreSQL/PostGIS · BullMQ · Swagger
-  web/        React 19 · Vite · Tailwind 4 · TanStack Query · react-leaflet · Recharts
+  web/        React 19 · Vite · Tailwind 4 · TanStack Query · Leaflet + markercluster · Recharts
   mobile/     Expo SDK 58 · expo-router · react-native-maps · expo-notifications
 packages/
   shared/     Schemas Zod, tipos da API, formatadores e faixas de preço (usado por todos)
@@ -120,7 +125,7 @@ pnpm typecheck
 pnpm --filter @bomba-certa/shared test      # 9
 pnpm --filter @bomba-certa/api test         # 34 unitários
 pnpm --filter @bomba-certa/api test:e2e     # 24, contra PostgreSQL/PostGIS e Redis reais
-pnpm --filter @bomba-certa/web test         # 8
+pnpm --filter @bomba-certa/web test         # 25
 pnpm --filter @bomba-certa/mobile test      # 5
 ```
 
@@ -166,6 +171,19 @@ O GitHub Actions ([ci.yml](.github/workflows/ci.yml)) roda lint, formatação, t
   são idempotentes, então jobs a mais são inofensivos. (O BullMQ também proíbe `:` em `jobId`; um e2e pegou isso.)
 - O agendamento semanal (`upsertJobScheduler`) é idempotente e **se recria a cada hora**, porque um Redis efêmero pode esquecê-lo.
 - O in-app é a fonte da verdade (falha → retry); e-mail e push são _best effort_ atrás da interface `NotificationChannel`.
+
+**Front-end (web)**
+
+- **Design tokens** em CSS (`--background`, `--primary`, `--band-cheap`...) mapeados com `@theme inline` do Tailwind 4: os componentes só
+  usam nomes semânticos, então o tema escuro é só outro conjunto de valores (classe `.dark`, com script inline que evita o _flash_).
+- **Atomic Design** (`atoms/molecules/organisms/templates`), variantes com `class-variance-authority` e `tailwind-merge`.
+- **Acessibilidade**: a faixa de preço nunca depende só da cor (ícone + texto na lista, forma no pino); `aria-pressed` nos filtros,
+  `aria-expanded` e `inert` no _bottom sheet_, foco visível, _skip link_ e respeito a `prefers-reduced-motion` (inclusive no gráfico).
+- **Mapa com a API nativa do Leaflet**, não `react-leaflet`: o `leaflet.markercluster` não tem wrapper React, e criar/destruir o mapa em
+  efeitos mantém seguro o duplo _mount_ do StrictMode. Os ícones são HTML gerado por funções puras e testadas (`lib/mapIcons.ts`).
+  O tema escuro do mapa inverte os tiles por CSS, sem um segundo provedor.
+- **`AsyncStateView`**: um só lugar para os quatro estados de dado remoto (carregando, erro com retry, vazio, sucesso).
+- _Bottom sheet_ com altura **medida** (`ResizeObserver`), para a bandeja recolhida caber exatamente no conteúdo.
 
 **Qualidade**
 
