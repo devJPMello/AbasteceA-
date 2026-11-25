@@ -30,7 +30,13 @@ const UNKNOWN = new Set([
  * Kept deliberately small: unknown brands fall back to their own normalised name.
  */
 function family(key: string): string {
-  if (key === 'br' || key.startsWith('petrobras') || key.startsWith('brdistribuidora'))
+  // Vibra Energia is the former BR Distribuidora: ANP files now list it as VIBRA.
+  if (
+    key === 'br' ||
+    key.startsWith('petrobras') ||
+    key.startsWith('brdistribuidora') ||
+    key.startsWith('vibra')
+  )
     return 'petrobras';
   if (key.startsWith('shell') || key.startsWith('raizen')) return 'shell';
   return key;

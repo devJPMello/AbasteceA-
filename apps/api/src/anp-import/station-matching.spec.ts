@@ -14,6 +14,7 @@ describe('canonicalBrand', () => {
   it('groups names of the same chain: BR / Petrobras and Raízen / Shell', () => {
     expect(canonicalBrand('BR')).toBe('petrobras');
     expect(canonicalBrand('PETROBRAS DISTRIBUIDORA S.A.')).toBe('petrobras');
+    expect(canonicalBrand('VIBRA')).toBe('petrobras'); // ex-BR Distribuidora, as in 2026 ANP files
     expect(canonicalBrand('RAIZEN')).toBe('shell');
     expect(canonicalBrand('Shell')).toBe('shell');
   });
