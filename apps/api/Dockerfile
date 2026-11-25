@@ -3,7 +3,7 @@
 # Build from the REPOSITORY ROOT (the workspace needs packages/shared):
 #   docker build -f apps/api/Dockerfile -t bomba-certa-api .
 
-FROM node:22-bookworm-slim AS base
+FROM node:25-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 # pnpm version comes from the "packageManager" field in package.json
@@ -35,7 +35,7 @@ RUN pnpm --filter @bomba-certa/api deploy --prod --legacy /out \
   && cd /out && node_modules/.bin/prisma generate
 
 # ---------- runtime ----------
-FROM node:22-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
