@@ -243,8 +243,11 @@ Gratuito: **Render** (API + Redis) + **Neon** (PostgreSQL com PostGIS) + **Cloud
 
 ## Limitações conhecidas e próximos passos
 
-- **ANP**: o link e o formato do arquivo semanal atual **não foram confirmados**; o parser segue o dicionário de dados oficial
-  e foi testado com um arquivo fictício. Também não confirmei se Palmas está na amostra de municípios pesquisados.
+- **ANP**: o arquivo real (dados abertos da ANP, série mensal por produto, ex.: `dsan/2026/07-dados-abertos-precos-gasolina-etanol.csv`)
+  tem o formato que o parser espera, e o importador rodou com ele. Mas o levantamento da ANP é uma **amostra**: em julho/2026 Palmas aparece
+  com só **3 postos** (gasolina e etanol), e o Nominatim **não geocodifica** os endereços por quadra da ANP (`QNE 14`, `ARSE 61`): nenhum dos 3 foi
+  localizado, então nenhum preço entrou. Cair para "só a rua" daria um ponto qualquer de uma avenida longa, por isso não foi feito. Na prática, os preços de
+  Palmas vêm dos usuários; a ANP só ajudaria com um geocodificador melhor ou um mapa CNPJ → coordenadas.
   Postos cadastrados por usuários sem CNPJ só casam com a ANP por proximidade + bandeira (veja _Fontes de dados_).
 - **OpenStreetMap**: a cobertura de Palmas é pequena (21 postos úteis no _snapshot_; 17 de 38 elementos foram descartados por
   serem de aviação ou não terem nome nem bandeira). Nomes e bandeiras podem estar desatualizados, e a bandeira nunca é deduzida do nome.
