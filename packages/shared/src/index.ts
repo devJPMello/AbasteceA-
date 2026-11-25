@@ -91,3 +91,9 @@ export type CreateAlertInput = z.infer<typeof createAlertSchema>;
 
 export * from './format';
 export * from './price-band';
+
+export const registerDeviceSchema = z.object({
+  token: z.string().regex(/^(Exponent|Expo)PushToken\[[^\]]+\]$/, 'Invalid Expo push token'),
+  platform: z.enum(['ios', 'android']),
+});
+export type RegisterDeviceInput = z.infer<typeof registerDeviceSchema>;
