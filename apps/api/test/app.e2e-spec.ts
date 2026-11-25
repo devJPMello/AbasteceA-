@@ -250,6 +250,10 @@ describe('Bomba Certa API (e2e, real PostGIS)', () => {
   it('serves liveness and readiness probes', async () => {
     const live = await http.get('/health').expect(200);
     expect(live.body).toEqual({ status: 'ok' });
+    // helmet: hardening headers present, framework fingerprint absent.
+    expect(live.headers['x-content-type-options']).toBe('nosniff');
+    expect(live.headers['x-frame-options']).toBeDefined();
+    expect(live.headers['x-powered-by']).toBeUndefined();
     const ready = await http.get('/health/ready').expect(200);
     expect(ready.body).toEqual({ status: 'ok', checks: { database: 'up', redis: 'up' } });
   });

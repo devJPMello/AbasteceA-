@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
@@ -9,6 +10,12 @@ import type { Env } from './config/env';
 export function setupApp(app: INestApplication) {
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   app.useLogger(app.get(Logger));
+  // Security headers (nosniff, frame protection, HSTS, no X-Powered-By...). CSP is off on purpose:
+  // this is a JSON API, and Swagger UI at /docs needs inline scripts. The web app sets its own
+  // headers (apps/web/public/_headers).
+  app.use(
+    helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }),
+  );
   app.enableCors({ origin: config.get('CORS_ORIGIN', { infer: true }).split(',') });
   app.enableShutdownHooks();
   // Without this, behind a proxy every request appears to come from the proxy's IP and the
