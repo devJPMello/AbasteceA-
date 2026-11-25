@@ -247,5 +247,7 @@ Gratuito: **Render** (API + Redis) + **Neon** (PostgreSQL com PostGIS) + **Cloud
   impacto aqui; uma restrição única no banco resolveria.
 - Headers de segurança: a API usa `helmet` e o web usa o `_headers` do Pages. Falta uma **Content-Security-Policy** no web (precisa da origem da API
   de produção e de um hash para o script inline do tema).
-- Faltam `LICENSE` e análise de dependências automatizada (Dependabot/`pnpm audit` no CI). O `pnpm audit` tem avisos em ferramentas do Expo e no `nodemailer`.
+- Falta um `LICENSE` (a escolha é sua). O Dependabot semanal está configurado, mas o `pnpm audit` ainda não roda no CI. Depois de atualizar
+  `nodemailer` e `csv-parse`, os avisos que restam exigem migrações maiores: `@prisma/client` 6 → 7 (`effect`, `deepmerge-ts`),
+  `nestjs-zod`/`zod` 3 → 4 e `react-router-dom` 6 → 7, além de ferramentas de build do Expo (`minimatch`).
 - No plano gratuito do Render a API hiberna (ver [DEPLOY.md](DEPLOY.md#limitações-do-plano-gratuito)).
