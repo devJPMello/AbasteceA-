@@ -1,0 +1,54 @@
+# Render Blueprint: infrastructure as code for the API and its Redis.
+# PostgreSQL (with PostGIS) lives on Neon; the web app on Cloudflare Pages. See DEPLOY.md.
+#
+# NOTE: written from Render's Blueprint reference but NOT validated against Render (no CLI/account
+# here). If the dashboard rejects a field, DEPLOY.md lists the equivalent manual settings.
+
+services:
+  - type: web
+    name: bomba-certa-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    # Cheap liveness check, no dependencies touched.
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Behind Render's proxy: without this every user shares one IP for rate limiting.
+      - key: TRUST_PROXY
+        value: 'true'
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: bomba-certa-redis
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      # Neon POOLED connection (host contains "-pooler"), used by the running app.
+      - key: DATABASE_URL
+        sync: false
+      # Neon DIRECT connection, used only to run migrations on boot.
+      - key: DIRECT_URL
+        sync: false
+      # URL of the Cloudflare Pages site, e.g. https://bomba-certa.pages.dev
+      - key: CORS_ORIGIN
+        sync: false
+      # Turn on only after confirming the dataset link (see DEPLOY.md).
+      - key: ANP_IMPORT_ENABLED
+        value: 'false'
+      - key: ANP_DATASET_URL
+        sync: false
+      # Optional: e-mail for price alerts (any SMTP provider).
+      - key: SMTP_URL
+        sync: false
+
+  # BullMQ queues live here. The free instance is in-memory and may restart: the API re-registers
+  # its schedule every hour, and in-flight jobs lost in a restart are acceptable for this app.
+  - type: keyvalue
+    name: bomba-certa-redis
+    plan: free
+    # BullMQ needs noeviction: with an LRU policy Redis could evict queue keys under memory pressure.
+    maxmemoryPolicy: noeviction
+    ipAllowList: [] # internal network only
