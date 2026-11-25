@@ -284,8 +284,13 @@ describe('Background jobs (e2e, real Postgres + Redis)', () => {
     const csv = readFileSync(join(__dirname, 'fixtures/anp-sample.csv'), 'utf8');
     let importer: AnpImportService;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       importer = app.get(AnpImportService);
+      // The alert tests above left CNPJ-less stations ~200 m from the fake geocoded points, which
+      // the importer would (correctly) match. Start from a clean slate.
+      await prisma.$executeRawUnsafe(
+        'TRUNCATE stations, price_reports, station_current_prices, price_alerts, notifications CASCADE',
+      );
     });
 
     it('imports Palmas stations, geocodes new ones and tags the source as ANP', async () => {
@@ -295,6 +300,8 @@ describe('Background jobs (e2e, real Postgres + Redis)', () => {
         rowsImported: 4, // station 1: gasoline + ethanol; station 2: premium + diesel S10
         rowsSkipped: 2, // 1 invalid price + 1 station that could not be geocoded
         stationsCreated: 2,
+        stationsMatched: 0,
+        stationsAmbiguous: 0,
       });
 
       const stations = await prisma.station.findMany({ where: { source: 'ANP' } });
@@ -325,6 +332,92 @@ describe('Background jobs (e2e, real Postgres + Redis)', () => {
       const runs = await prisma.anpImportRun.findMany({ orderBy: { startedAt: 'asc' } });
       expect(runs.map((r) => r.status)).toEqual(['SUCCEEDED', 'SUCCEEDED', 'FAILED']);
       expect(runs[2]!.error).toContain('missing expected columns');
+    });
+  });
+
+  describe('ANP import matching existing (OpenStreetMap) stations', () => {
+    const csv = readFileSync(join(__dirname, 'fixtures/anp-sample.csv'), 'utf8');
+    let importer: AnpImportService;
+
+    /** Inserts a station like the OSM seed does: no CNPJ, source OSM. */
+    const insertOsmStation = async (
+      name: string,
+      brand: string,
+      point: { lat: number; lng: number },
+    ) => {
+      const rows = await prisma.$queryRaw<{ id: string }[]>`
+        INSERT INTO stations (id, name, brand, address, source, location)
+        VALUES (gen_random_uuid(), ${name}, ${brand}, 'Endereço não informado', 'OSM'::station_source,
+                ST_SetSRID(ST_MakePoint(${point.lng}, ${point.lat}), 4326)::geography)
+        RETURNING id`;
+      return rows[0]!.id;
+    };
+
+    beforeAll(async () => {
+      importer = app.get(AnpImportService);
+    });
+
+    beforeEach(async () => {
+      await prisma.$executeRawUnsafe(
+        'TRUNCATE stations, price_reports, station_current_prices, price_alerts, notifications, anp_import_runs CASCADE',
+      );
+    });
+
+    it('gives the CNPJ and prices to the nearby same-brand station instead of duplicating it', async () => {
+      // ~20 m from where the fake geocoder places "AVENIDA JK" (at(300)).
+      const osmId = await insertOsmStation('Posto JK', 'Ipiranga', at(320));
+
+      const summary = await importer.importFromText(csv);
+      expect(summary).toMatchObject({
+        stationsMatched: 1,
+        stationsCreated: 1,
+        stationsAmbiguous: 0,
+      });
+
+      const station = await prisma.station.findUniqueOrThrow({ where: { id: osmId } });
+      expect(station.cnpj).toBe('11111111000111');
+      expect(station.source).toBe('OSM'); // origin kept; only the CNPJ was learned
+      expect(station.name).toBe('Posto JK'); // good data is never overwritten
+      expect(station.address).not.toBe('Endereço não informado'); // placeholder filled from ANP
+      expect(await prisma.station.count({ where: { cnpj: '11111111000111' } })).toBe(1);
+      expect(await prisma.priceReport.count({ where: { stationId: osmId, source: 'ANP' } })).toBe(
+        2,
+      );
+    });
+
+    it('fills an unknown brand from ANP', async () => {
+      const osmId = await insertOsmStation('Posto sem bandeira', 'Não informada', at(310));
+      await importer.importFromText(csv);
+      const station = await prisma.station.findUniqueOrThrow({ where: { id: osmId } });
+      expect(station.cnpj).toBe('11111111000111');
+      expect(station.brand).toBe('IPIRANGA');
+    });
+
+    it('skips and reports an ambiguous match instead of guessing', async () => {
+      // Two Shell stations around the "AVENIDA NS 01" point (at(900)): which one is it?
+      await insertOsmStation('Shell A', 'Shell', at(880));
+      await insertOsmStation('Shell B', 'Shell', at(920));
+
+      const summary = await importer.importFromText(csv);
+      expect(summary.stationsAmbiguous).toBe(1);
+      expect(await prisma.station.count({ where: { cnpj: '22222222000122' } })).toBe(0);
+      expect(await prisma.station.count({ where: { source: 'OSM', cnpj: { not: null } } })).toBe(0);
+    });
+
+    it('creates a new station when the neighbour has a different brand', async () => {
+      await insertOsmStation('Posto Shell vizinho', 'Shell', at(310)); // ANP says IPIRANGA
+      const summary = await importer.importFromText(csv);
+      expect(summary.stationsMatched).toBe(0);
+      expect(await prisma.station.count({ where: { cnpj: '11111111000111' } })).toBe(1);
+      expect(await prisma.station.count()).toBe(3); // neighbour + 2 created from ANP
+    });
+
+    it('is idempotent once matched', async () => {
+      await insertOsmStation('Posto JK', 'Ipiranga', at(320));
+      await importer.importFromText(csv);
+      const again = await importer.importFromText(csv);
+      expect(again).toMatchObject({ rowsImported: 0, stationsMatched: 0, stationsCreated: 0 });
+      expect(await prisma.station.count({ where: { cnpj: '11111111000111' } })).toBe(1);
     });
   });
 });

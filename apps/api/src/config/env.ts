@@ -30,6 +30,8 @@ const envSchema = z.object({
   ANP_CRON_TZ: z.string().default('America/Araguaina'),
   ANP_MUNICIPALITY: z.string().default('PALMAS'),
   ANP_STATE: z.string().length(2).default('TO'),
+  /** ANP rows are geocoded from a street address (imprecise), so matching to a known station allows for that. */
+  ANP_MATCH_RADIUS_METERS: z.coerce.number().int().min(20).max(1000).default(200),
   GEOCODER_URL: z.string().url().default('https://nominatim.openstreetmap.org/search'),
   /** Nominatim requires an identifying User-Agent. */
   GEOCODER_USER_AGENT: z.string().default('bomba-certa-importer/0.1'),

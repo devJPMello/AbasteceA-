@@ -6,13 +6,19 @@ import type { Env } from '../config/env';
 import { applyCurrentPrice } from '../prices/current-price';
 import { PrismaService } from '../prisma/prisma.service';
 import { latestPerStationFuel, parseAnpCsv, type AnpRow } from './anp-csv';
+import { UNKNOWN_ADDRESS, UNKNOWN_BRAND } from '../stations/station-defaults';
 import { GEOCODER, type Geocoder } from './geocoder';
+import { resolveCandidates } from './station-matching';
 
 export interface ImportSummary {
   rowsRead: number;
   rowsImported: number;
   rowsSkipped: number;
   stationsCreated: number;
+  /** Existing stations (e.g. from OpenStreetMap) that received a CNPJ by proximity + brand. */
+  stationsMatched: number;
+  /** Stations skipped because several existing ones were equally plausible (never guessed). */
+  stationsAmbiguous: number;
 }
 
 /** ANP files are Latin-1 in some releases and UTF-8 in others: try strict UTF-8 first. */
@@ -59,18 +65,22 @@ export class AnpImportService {
         rowsImported: 0,
         rowsSkipped: parsed.invalidRows,
         stationsCreated: 0,
+        stationsMatched: 0,
+        stationsAmbiguous: 0,
       };
 
       const byStation = new Map<string, AnpRow[]>();
       for (const row of rows) byStation.set(row.cnpj, [...(byStation.get(row.cnpj) ?? []), row]);
 
       for (const [cnpj, stationRows] of byStation) {
-        const { id: stationId, created } = await this.ensureStation(cnpj, stationRows[0]!);
+        const { id: stationId, outcome } = await this.ensureStation(cnpj, stationRows[0]!);
         if (!stationId) {
-          summary.rowsSkipped += stationRows.length; // could not locate it on the map
+          summary.rowsSkipped += stationRows.length; // not located, or ambiguous: no price is written
+          if (outcome === 'ambiguous') summary.stationsAmbiguous++;
           continue;
         }
-        if (created) summary.stationsCreated++;
+        if (outcome === 'created') summary.stationsCreated++;
+        if (outcome === 'matched') summary.stationsMatched++;
         for (const row of stationRows) {
           if (await this.insertReport(stationId, row)) summary.rowsImported++;
         }
@@ -97,13 +107,28 @@ export class AnpImportService {
     }
   }
 
-  /** Match by CNPJ; geocode and create only unknown stations (the DB is the geocoding cache). */
-  private async ensureStation(cnpj: string, row: AnpRow) {
+  /**
+   * Finds (or creates) the station for an ANP row, in this order:
+   *  1. by CNPJ: the key; also what makes re-imports cheap and idempotent;
+   *  2. by PROXIMITY + BRAND among stations that have no CNPJ yet (e.g. imported from
+   *     OpenStreetMap): geocode the ANP address, look within ANP_MATCH_RADIUS_METERS with
+   *     ST_DWithin, and merge only when exactly one candidate is clearly the same station;
+   *  3. otherwise create a new station (the geocoding result is stored: the DB is the cache).
+   * An ambiguous match is skipped and logged: a duplicate pin is better than prices on the wrong
+   * station.
+   */
+  private async ensureStation(
+    cnpj: string,
+    row: AnpRow,
+  ): Promise<{
+    id: string | null;
+    outcome: 'existing' | 'matched' | 'created' | 'ambiguous' | 'ungeocoded';
+  }> {
     const existing = await this.prisma.station.findUnique({
       where: { cnpj },
       select: { id: true },
     });
-    if (existing) return { id: existing.id, created: false };
+    if (existing) return { id: existing.id, outcome: 'existing' };
 
     const city = this.config.get('ANP_MUNICIPALITY', { infer: true });
     const query = [row.street, row.number, row.district, city, 'Tocantins', 'Brasil']
@@ -112,16 +137,44 @@ export class AnpImportService {
     const point = await this.geocoder.geocode(query);
     if (!point) {
       this.logger.warn(`Skipping station ${cnpj}: address could not be geocoded`);
-      return { id: null, created: false };
+      return { id: null, outcome: 'ungeocoded' };
+    }
+
+    // ST_DWithin on geography takes metres and uses the GIST index; closest candidates first.
+    const radius = this.config.get('ANP_MATCH_RADIUS_METERS', { infer: true });
+    const candidates = await this.prisma.$queryRaw<{ id: string; brand: string }[]>`
+      SELECT id, brand
+      FROM stations
+      WHERE cnpj IS NULL
+        AND ST_DWithin(location, ST_SetSRID(ST_MakePoint(${point.lng}, ${point.lat}), 4326)::geography, ${radius})
+      ORDER BY ST_Distance(location, ST_SetSRID(ST_MakePoint(${point.lng}, ${point.lat}), 4326)::geography)`;
+
+    const match = resolveCandidates(candidates, row.brand);
+    if (match.kind === 'ambiguous') {
+      this.logger.warn(
+        `Station ${cnpj} (${row.stationName}, ${row.brand}) is ambiguous between ${match.ids.length} nearby stations (${match.ids.join(', ')}): skipped, not guessed`,
+      );
+      return { id: null, outcome: 'ambiguous' };
+    }
+    if (match.kind === 'matched') {
+      // Guarded by cnpj IS NULL: if another row claimed the station meanwhile, nothing changes.
+      // Only fills what we did not know (placeholders); never overwrites good data.
+      const updated = await this.prisma.$executeRaw`
+        UPDATE stations
+        SET cnpj = ${cnpj},
+            brand = CASE WHEN brand = ${UNKNOWN_BRAND} THEN ${row.brand} ELSE brand END,
+            address = CASE WHEN address = ${UNKNOWN_ADDRESS} THEN ${row.address} ELSE address END
+        WHERE id = ${match.id}::uuid AND cnpj IS NULL`;
+      if (updated === 1) return { id: match.id, outcome: 'matched' };
     }
 
     const id = randomUUID();
     await this.prisma.$executeRaw`
       INSERT INTO stations (id, name, brand, cnpj, address, city, source, location)
       VALUES (${id}::uuid, ${row.stationName}, ${row.brand}, ${cnpj}, ${row.address},
-              ${city}, 'ANP'::price_source,
+              ${city}, 'ANP'::station_source,
               ST_SetSRID(ST_MakePoint(${point.lng}, ${point.lat}), 4326)::geography)`;
-    return { id, created: true };
+    return { id, outcome: 'created' };
   }
 
   /** Returns true when a new report was stored (false = already imported before). */
