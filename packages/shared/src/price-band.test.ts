@@ -1,4 +1,5 @@
-import { computeBands } from './priceBand';
+import { describe, expect, it } from 'vitest';
+import { computeBands } from './price-band';
 
 describe('computeBands', () => {
   it('splits prices into terciles', () => {

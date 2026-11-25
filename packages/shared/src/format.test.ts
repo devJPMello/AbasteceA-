@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { formatDistance, formatPrice, formatRelative, parsePriceInput } from './format';
 
 describe('format', () => {
