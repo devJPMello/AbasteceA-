@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { session } from '../lib/session';
+import { Toaster } from 'sonner';
+import { session } from '../../lib/session';
 import { ReportForm } from './ReportForm';
 
 const STATION = '33333333-3333-3333-3333-333333333333';
@@ -14,6 +15,7 @@ function renderForm() {
     >
       <MemoryRouter>
         <ReportForm stationId={STATION} initialFuel="ETHANOL" />
+        <Toaster />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -59,9 +61,7 @@ describe('ReportForm', () => {
       await userEvent.type(screen.getByPlaceholderText('6,299'), '9,50');
       await userEvent.click(screen.getByRole('button', { name: /Reportar/ }));
 
-      await waitFor(() =>
-        expect(screen.getByRole('status')).toHaveTextContent(/aguarda confirmação/),
-      );
+      expect(await screen.findByText(/aguarda confirmação/)).toBeInTheDocument();
       const [url, init] = fetchSpy.mock.calls[0]!;
       expect(String(url)).toContain('/prices/reports');
       expect(JSON.parse((init as RequestInit).body as string)).toEqual({

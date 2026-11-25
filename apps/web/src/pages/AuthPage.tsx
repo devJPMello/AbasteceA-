@@ -1,6 +1,11 @@
 import { loginSchema, registerSchema } from '@bomba-certa/shared';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Button } from '../components/atoms/Button';
+import { Card } from '../components/atoms/Card';
+import { Input } from '../components/atoms/Input';
+import { FormField } from '../components/molecules/FormField';
 import { ApiError, api } from '../lib/api';
 import { session } from '../lib/session';
 import type { AuthResponse } from '../lib/types';
@@ -27,6 +32,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         body: parsed.data,
       });
       session.set({ user: res.user, accessToken: res.accessToken, refreshToken: res.refreshToken });
+      toast.success(isRegister ? 'Conta criada. Bem-vindo!' : `Olá, ${res.user.name}!`);
       navigate('/');
     } catch (err) {
       setError(
@@ -36,56 +42,53 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             : err.status === 409
               ? 'Este e-mail já está cadastrado.'
               : err.message
-          : 'Erro inesperado.',
+          : 'Sem conexão com o servidor.',
       );
     } finally {
       setBusy(false);
     }
   }
 
-  const input = 'mt-1 w-full rounded border border-slate-300 px-3 py-2';
-
   return (
-    <div className="mx-auto max-w-sm p-6">
-      <h1 className="mb-4 text-2xl font-bold">{isRegister ? 'Criar conta' : 'Entrar'}</h1>
-      <form onSubmit={onSubmit} className="space-y-3" noValidate>
-        {isRegister && (
-          <label className="block text-sm font-medium">
-            Nome
-            <input name="name" autoComplete="name" className={input} />
-          </label>
-        )}
-        <label className="block text-sm font-medium">
-          E-mail
-          <input name="email" type="email" autoComplete="email" className={input} />
-        </label>
-        <label className="block text-sm font-medium">
-          Senha
-          <input
-            name="password"
-            type="password"
-            autoComplete={isRegister ? 'new-password' : 'current-password'}
-            className={input}
-          />
-        </label>
-        {error && (
-          <p role="alert" className="text-sm text-red-700">
-            {error}
-          </p>
-        )}
-        <button
-          disabled={busy}
-          className="w-full rounded bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark disabled:opacity-60"
-        >
-          {busy ? 'Aguarde…' : isRegister ? 'Cadastrar' : 'Entrar'}
-        </button>
-      </form>
-      <p className="mt-4 text-sm text-slate-600">
-        {isRegister ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
-        <Link to={isRegister ? '/login' : '/register'} className="font-medium text-brand underline">
-          {isRegister ? 'Entrar' : 'Cadastrar'}
-        </Link>
-      </p>
+    <div className="mx-auto max-w-sm p-4 pt-10">
+      <Card className="p-6">
+        <h1 className="mb-5 text-2xl font-bold tracking-tight">
+          {isRegister ? 'Criar conta' : 'Entrar'}
+        </h1>
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          {isRegister && (
+            <FormField label="Nome">
+              <Input name="name" autoComplete="name" />
+            </FormField>
+          )}
+          <FormField label="E-mail">
+            <Input name="email" type="email" autoComplete="email" />
+          </FormField>
+          <FormField
+            label="Senha"
+            hint={isRegister ? 'Mínimo de 8 caracteres.' : undefined}
+            error={error}
+          >
+            <Input
+              name="password"
+              type="password"
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+            />
+          </FormField>
+          <Button type="submit" loading={busy} className="w-full">
+            {isRegister ? 'Cadastrar' : 'Entrar'}
+          </Button>
+        </form>
+        <p className="mt-5 text-sm text-muted-foreground">
+          {isRegister ? 'Já tem conta?' : 'Ainda não tem conta?'}{' '}
+          <Link
+            to={isRegister ? '/login' : '/register'}
+            className="font-medium text-primary underline"
+          >
+            {isRegister ? 'Entrar' : 'Cadastrar'}
+          </Link>
+        </p>
+      </Card>
     </div>
   );
 }
