@@ -171,6 +171,7 @@ model AnpImportRun {
   finishedAt   DateTime? @map("finished_at")
   rowsRead     Int       @default(0) @map("rows_read")
   rowsImported Int       @default(0) @map("rows_imported")
+  rowsSkipped  Int       @default(0) @map("rows_skipped")
   status       String
   error        String?
 
