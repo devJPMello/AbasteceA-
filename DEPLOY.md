@@ -30,12 +30,13 @@ do Prisma, mas ele não consegue rodar migrations. O container usa `DIRECT_URL` 
    Docker, plano free) e o Key Value (`bomba-certa-redis`, free).
 2. Preencha as variáveis marcadas `sync: false`:
 
-   | Variável          | Valor                                                                  |
-   | ----------------- | ---------------------------------------------------------------------- |
-   | `DATABASE_URL`    | string **pooled** do Neon (passo 1)                                    |
-   | `DIRECT_URL`      | string **direct** do Neon                                              |
-   | `CORS_ORIGIN`     | URL do Cloudflare Pages (passo 4). Pode ficar para depois e redeployar |
-   | `ANP_DATASET_URL` | vazio por enquanto (veja o passo 6)                                    |
+   | Variável                  | Valor                                                                           |
+   | ------------------------- | ------------------------------------------------------------------------------- |
+   | `DATABASE_URL`            | string **pooled** do Neon (passo 1)                                             |
+   | `DIRECT_URL`              | string **direct** do Neon                                                       |
+   | `CORS_ORIGIN`             | URL do Cloudflare Pages (passo 4). Pode ficar para depois e redeployar          |
+   | `ANP_DATASET_URL`         | vazio por enquanto (veja o passo 6)                                             |
+   | `ANP_MATCH_RADIUS_METERS` | opcional, padrão 200: raio para casar revendas da ANP com postos já cadastrados |
 
    `REDIS_URL` é ligado automaticamente ao Key Value e `JWT_ACCESS_SECRET` é gerado pelo Render.
 
@@ -56,7 +57,7 @@ Web Service → Docker → `Dockerfile Path: apps/api/Dockerfile`, `Docker Build
 
 ### Dados de demonstração (opcional)
 
-O seed apaga postos e preços. Ele **recusa rodar** em banco que não seja `localhost` sem confirmação explícita:
+O seed apaga postos e preços e carrega os postos reais do OpenStreetMap (© OpenStreetMap contributors, ODbL) com preços **fictícios**. Ele **recusa rodar** em banco que não seja `localhost` sem confirmação explícita:
 
 ```powershell
 $env:DATABASE_URL = "<string DIRECT do Neon>"

@@ -14,7 +14,7 @@ garante dados mesmo sem usuários, e alertas de preço avisam quando algum posto
 | :-------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |
 | ![Página do posto com preços atuais e gráfico do histórico](docs/screenshots/web-station.jpg) | ![Mapa no celular com o posto selecionado na bandeja](docs/screenshots/web-mobile.jpg) |
 
-> Os preços e a maioria dos postos das imagens são **fictícios** (seed de desenvolvimento).
+> Os **preços** das imagens são **fictícios** (seed de desenvolvimento). Os postos do seed são reais, vindos do OpenStreetMap (veja _Fontes de dados_).
 > O app Expo ainda não foi executado em aparelho neste repositório: o print mobile acima é o web em viewport de celular.
 
 ## Funcionalidades
@@ -107,7 +107,7 @@ Copy-Item .env.example apps/api/.env
 docker compose up -d            # PostGIS, Redis e Mailpit
 pnpm --filter @bomba-certa/shared build
 pnpm --filter @bomba-certa/api prisma:deploy
-pnpm --filter @bomba-certa/api seed     # 12 postos de Palmas com preços fictícios
+pnpm --filter @bomba-certa/api seed     # postos reais (OpenStreetMap) com preços fictícios
 ```
 
 Defina `JWT_ACCESS_SECRET` (32+ caracteres) no `.env` e no `apps/api/.env`. Depois, em dois terminais:
@@ -127,8 +127,8 @@ pnpm lint
 pnpm format:check
 pnpm typecheck
 pnpm --filter @bomba-certa/shared test      # 9
-pnpm --filter @bomba-certa/api test         # 34 unitários
-pnpm --filter @bomba-certa/api test:e2e     # 24, contra PostgreSQL/PostGIS e Redis reais
+pnpm --filter @bomba-certa/api test         # 52 unitários
+pnpm --filter @bomba-certa/api test:e2e     # 29, contra PostgreSQL/PostGIS e Redis reais
 pnpm --filter @bomba-certa/web test         # 161 (inclui contraste dos tokens e axe)
 pnpm --filter @bomba-certa/web storybook    # catálogo de componentes em http://localhost:6006
 pnpm --filter @bomba-certa/mobile test      # 5
@@ -230,11 +230,27 @@ da API (alertas, notificações) são cobertas por testes, não por stories.
 Gratuito: **Render** (API + Redis) + **Neon** (PostgreSQL com PostGIS) + **Cloudflare Pages** (web). O repositório está pronto
 (Dockerfile, [render.yaml](render.yaml), keep-alive), **mas nada foi publicado**. Passo a passo e limitações em [DEPLOY.md](DEPLOY.md).
 
+## Fontes de dados
+
+- **Postos (seed)**: _snapshot_ do OpenStreetMap para Palmas em `apps/api/prisma/data/palmas-osm-stations.json`, gerado por
+  `pnpm --filter @bomba-certa/api osm:fetch` (Overpass API). Dados **© OpenStreetMap contributors**, licença [ODbL](https://www.openstreetmap.org/copyright).
+  Postos entram com `source = OSM`, sem CNPJ, e bandeira/endereço "não informado" quando o OSM não os tem.
+- **Preços do seed**: **fictícios** (fórmula em torno de valores típicos, atribuídos a um usuário "Seed Bot"). Preços reais vêm dos usuários e da ANP.
+- **Importador ANP**: para cada revenda, procura por CNPJ; se não achar, geocodifica o endereço e busca postos **sem CNPJ** num raio
+  (`ST_DWithin` em `geography`, em metros, usando o índice GIST) com bandeira compatível. Um único candidato claro recebe o CNPJ
+  (e preenche só os campos "não informado"); vários candidatos equivalentes = ambíguo, ignorado; nenhum = posto novo (`source = ANP`).
+  O resumo da execução informa `stationsMatched` e `stationsAmbiguous`.
+
 ## Limitações conhecidas e próximos passos
 
 - **ANP**: o link e o formato do arquivo semanal atual **não foram confirmados**; o parser segue o dicionário de dados oficial
   e foi testado com um arquivo fictício. Também não confirmei se Palmas está na amostra de municípios pesquisados.
-  Postos cadastrados por usuários sem CNPJ não casam com a ANP.
+  Postos cadastrados por usuários sem CNPJ só casam com a ANP por proximidade + bandeira (veja _Fontes de dados_).
+- **OpenStreetMap**: a cobertura de Palmas é pequena (21 postos úteis no _snapshot_; 17 de 38 elementos foram descartados por
+  serem de aviação ou não terem nome nem bandeira). Nomes e bandeiras podem estar desatualizados, e a bandeira nunca é deduzida do nome.
+- **Casamento ANP ↔ OSM**: em quarteirões com vários postos da mesma bandeira o caso é ambíguo e o posto é **ignorado e registrado**,
+  nunca adivinhado: um pino duplicado é melhor que preço no posto errado. O endereço da ANP é geocodificado por rua, então o raio
+  (`ANP_MATCH_RADIUS_METERS`, padrão 200 m) tolera essa imprecisão.
 - **Mobile**: validado por typecheck, testes e _bundle_ do Metro, **não** em aparelho. Push exige projeto EAS e _development build_.
 - Eventos de preço são publicados após o _commit_ (_best effort_): se o Redis cair, o preço é salvo mas o alerta atrasa. Um _outbox_ transacional resolveria.
 - O mobile ainda não tem a lista de reportes pendentes (só o web), e o sino do web atualiza por _polling_ de 1 min (mais um _refetch_ logo após criar um alerta), não em tempo real: um WebSocket/SSE seria a evolução.
