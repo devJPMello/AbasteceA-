@@ -4,11 +4,14 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { AlertsModule } from './alerts/alerts.module';
+import { AnpImportModule } from './anp-import/anp-import.module';
 import { AuthModule } from './auth/auth.module';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { Env, validateEnv } from './config/env';
 import { PricesModule } from './prices/prices.module';
 import { PrismaModule } from './prisma/prisma.service';
+import { QueuesModule } from './queues/queues.module';
 import { StationsModule } from './stations/stations.module';
 import { UsersModule } from './users/users.module';
 
@@ -44,7 +47,10 @@ import { UsersModule } from './users/users.module';
       }),
     }),
     PrismaModule,
+    QueuesModule,
     AuthModule,
+    AlertsModule,
+    AnpImportModule,
     UsersModule,
     StationsModule,
     PricesModule,
